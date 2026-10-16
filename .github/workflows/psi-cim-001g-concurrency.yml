@@ -1,0 +1,64 @@
+name: PSI-CIM-001G Concurrency Certification
+
+on:
+  pull_request:
+  push:
+    branches: [psi-cim-001g-implementation]
+
+jobs:
+  delivery-budget-contention:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: neondb
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d neondb"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    env:
+      DATABASE_URL: postgresql://postgres:postgres@localhost:5432/neondb
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install PostgreSQL client
+        run: sudo apt-get update && sudo apt-get install -y postgresql-client
+      - name: Create minimal pre-001G baseline
+        run: psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f tests/fixtures/001g_concurrency_baseline.sql
+      - name: Apply complete actual 001G migration chain
+        shell: bash
+        run: |
+          set -euo pipefail
+          for migration in db/migrations/001G_*.sql; do
+            echo "==> $migration"
+            psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f "$migration"
+          done
+      - name: Verify final delivery-resolution migration is active
+        run: |
+          test "$(psql "$DATABASE_URL" -qAtv ON_ERROR_STOP=1 -c "SELECT to_regprocedure('psi_resolve_delivery(uuid,text,text,uuid)') IS NOT NULL")" = "t"
+          test "$(psql "$DATABASE_URL" -qAtv ON_ERROR_STOP=1 -c "SELECT to_regclass('public.v_delivery_current_state') IS NOT NULL")" = "t"
+          test "$(psql "$DATABASE_URL" -qAtv ON_ERROR_STOP=1 -c "SELECT to_regprocedure('psi_orchestration_attention_for_user(uuid)') IS NOT NULL")" = "t"
+      - name: Run true two-process T1 contention proof against final delivery function
+        run: bash tests/concurrency/001g_delivery_budget_atomic.sh
+      - name: Run append-only delivery-resolution lifecycle proof
+        run: psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f tests/sql/001g_delivery_resolution.sql
+      - name: Run active-attention visibility proof
+        run: psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f tests/sql/001g_attention_visibility.sql
+      - name: Assert first-pass 001G migration contract
+        run: psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f tests/sql/001g_migration_replay.sql
+      - name: Reapply complete 001G migration chain
+        shell: bash
+        run: |
+          set -euo pipefail
+          for migration in db/migrations/001G_*.sql; do
+            echo "==> replay $migration"
+            psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f "$migration"
+          done
+      - name: Assert second full 001G replay
+        run: psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f tests/sql/001g_migration_replay.sql

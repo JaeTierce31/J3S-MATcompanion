@@ -1,0 +1,38 @@
+name: PSI-CIM-001G Policy Smoke
+
+on:
+  pull_request:
+  push:
+    branches: [main, psi-cim-001g-implementation]
+
+jobs:
+  policy-smoke:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: neondb
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d neondb"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    env:
+      DATABASE_URL: postgresql://postgres:postgres@localhost:5432/neondb
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install PostgreSQL client
+        run: sudo apt-get update && sudo apt-get install -y postgresql-client
+      - name: Apply standalone 001G policy migration
+        run: psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f db/migrations/001G_001_policy_config.sql
+      - name: Test standalone 001G policy contract
+        run: psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f tests/sql/001g_policy_config.sql
+      - name: State certification boundary
+        run: |
+          echo "This workflow is a standalone policy smoke test only."
+          echo "Full PSI-CIM-001G certification requires .github/workflows/psi-cim-001g-runtime-certify.yml against a disposable verified 001F runtime baseline."

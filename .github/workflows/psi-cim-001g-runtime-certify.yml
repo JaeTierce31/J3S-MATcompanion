@@ -1,0 +1,33 @@
+name: PSI-CIM-001G Runtime Certification
+
+on:
+  workflow_dispatch:
+
+jobs:
+  certify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      DATABASE_URL: ${{ secrets.PSI_RUNTIME_DATABASE_URL }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Require disposable verified 001F baseline database
+        shell: bash
+        run: |
+          : "${DATABASE_URL:?Set PSI_RUNTIME_DATABASE_URL to a disposable verified 001F-baseline PostgreSQL 17 database}"
+
+      - name: Install PostgreSQL client
+        shell: bash
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y postgresql-client
+          psql --version
+
+      - name: Replay 001G twice over verified 001F baseline
+        shell: bash
+        run: bash scripts/replay_001g.sh
+
+      - name: Run complete 001G verification
+        shell: bash
+        run: bash scripts/verify_001g.sh
