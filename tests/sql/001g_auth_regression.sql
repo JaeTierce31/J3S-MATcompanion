@@ -21,6 +21,7 @@ BEGIN
     IF has_function_privilege('psi_dashboard_reader','psi_close_action(uuid,text,numeric,jsonb,jsonb)','EXECUTE') THEN RAISE EXCEPTION 'dashboard reader can execute internal action closure'; END IF;
     IF has_function_privilege('psi_dashboard_reader','psi_resolve_delivery(uuid,text,text,uuid)','EXECUTE') THEN RAISE EXCEPTION 'dashboard reader can execute internal delivery resolution'; END IF;
     IF has_function_privilege('psi_dashboard_reader','psi_rank_candidate_safe(uuid)','EXECUTE') THEN RAISE EXCEPTION 'dashboard reader can execute internal degraded-mode ranker'; END IF;
+    IF has_function_privilege('psi_dashboard_reader','psi_orchestration_attention_for_user(uuid)','EXECUTE') THEN RAISE EXCEPTION 'dashboard reader can bypass auth-bound attention API'; END IF;
 
     IF NOT has_function_privilege('psi_dashboard_reader','api_orchestration_receipt(uuid)','EXECUTE') THEN RAISE EXCEPTION 'dashboard reader lacks receipt API execute'; END IF;
     IF NOT has_function_privilege('psi_dashboard_reader','api_orchestration_attention()','EXECUTE') THEN RAISE EXCEPTION 'dashboard reader lacks attention API execute'; END IF;
