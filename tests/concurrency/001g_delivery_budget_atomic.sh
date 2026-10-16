@@ -2,10 +2,10 @@
 set -euo pipefail
 : "${DATABASE_URL:?DATABASE_URL is required}"
 
-u=$(psql "$DATABASE_URL" -Atv ON_ERROR_STOP=1 -c "INSERT INTO users DEFAULT VALUES RETURNING id" | tail -n1)
+u=$(psql "$DATABASE_URL" -qAtv ON_ERROR_STOP=1 -c "INSERT INTO users DEFAULT VALUES RETURNING id" | tail -n1)
 
 mk_candidate() {
-  psql "$DATABASE_URL" -Atv ON_ERROR_STOP=1 -c "WITH c AS (
+  psql "$DATABASE_URL" -qAtv ON_ERROR_STOP=1 -c "WITH c AS (
     INSERT INTO insight_candidates(user_id,candidate_type,subject_type,subject_id,proposed_title,proposed_summary,authority_class)
     VALUES ('$u','experiment_result','experiment',gen_random_uuid(),'Concurrent T1','Concurrency fixture','advisory')
     RETURNING id
@@ -25,9 +25,9 @@ tmp1=$(mktemp)
 tmp2=$(mktemp)
 trap 'rm -f "$tmp1" "$tmp2"' EXIT
 
-psql "$DATABASE_URL" -Atv ON_ERROR_STOP=1 -c "SELECT psi_delivery_decision('$c1','in_app',clock_timestamp())" >"$tmp1" &
+psql "$DATABASE_URL" -qAtv ON_ERROR_STOP=1 -c "SELECT psi_delivery_decision('$c1','in_app',clock_timestamp())" >"$tmp1" &
 p1=$!
-psql "$DATABASE_URL" -Atv ON_ERROR_STOP=1 -c "SELECT psi_delivery_decision('$c2','in_app',clock_timestamp())" >"$tmp2" &
+psql "$DATABASE_URL" -qAtv ON_ERROR_STOP=1 -c "SELECT psi_delivery_decision('$c2','in_app',clock_timestamp())" >"$tmp2" &
 p2=$!
 wait "$p1"
 wait "$p2"
@@ -40,7 +40,7 @@ ordered=$(printf '%s\n%s\n' "$r1" "$r2" | sort | tr '\n' ' ')
   exit 1
 }
 
-active=$(psql "$DATABASE_URL" -Atv ON_ERROR_STOP=1 -c "SELECT count(*) FROM delivery_events WHERE user_id='$u' AND tier='T1' AND active AND primary_attention AND delivered")
+active=$(psql "$DATABASE_URL" -qAtv ON_ERROR_STOP=1 -c "SELECT count(*) FROM delivery_events WHERE user_id='$u' AND tier='T1' AND active AND primary_attention AND delivered")
 [[ "$active" == "1" ]] || {
   echo "expected exactly one active T1, got $active" >&2
   exit 1
