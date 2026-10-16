@@ -24,6 +24,7 @@ BEGIN
   IF to_regprocedure('psi_rank_candidate_safe(uuid)') IS NULL THEN RAISE EXCEPTION 'safe ranking oracle missing'; END IF;
   IF to_regprocedure('psi_delivery_decision(uuid,text,timestamptz)') IS NULL THEN RAISE EXCEPTION 'delivery oracle missing'; END IF;
   IF to_regprocedure('psi_resolve_delivery(uuid,text,text,uuid)') IS NULL THEN RAISE EXCEPTION 'delivery resolution oracle missing'; END IF;
+  IF to_regprocedure('psi_orchestration_attention_for_user(uuid)') IS NULL THEN RAISE EXCEPTION 'active attention projection missing'; END IF;
   IF to_regprocedure('psi_select_next_action(uuid)') IS NULL THEN RAISE EXCEPTION 'next-action oracle missing'; END IF;
   IF to_regprocedure('psi_close_action(uuid,text,numeric,jsonb,jsonb)') IS NULL THEN RAISE EXCEPTION 'action closure oracle missing'; END IF;
   IF to_regprocedure('api_orchestration_receipt(uuid)') IS NULL THEN RAISE EXCEPTION 'receipt API missing'; END IF;
