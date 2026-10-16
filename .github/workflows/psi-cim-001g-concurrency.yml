@@ -43,10 +43,13 @@ jobs:
         run: |
           test "$(psql "$DATABASE_URL" -qAtv ON_ERROR_STOP=1 -c "SELECT to_regprocedure('psi_resolve_delivery(uuid,text,text,uuid)') IS NOT NULL")" = "t"
           test "$(psql "$DATABASE_URL" -qAtv ON_ERROR_STOP=1 -c "SELECT to_regclass('public.v_delivery_current_state') IS NOT NULL")" = "t"
+          test "$(psql "$DATABASE_URL" -qAtv ON_ERROR_STOP=1 -c "SELECT to_regprocedure('psi_orchestration_attention_for_user(uuid)') IS NOT NULL")" = "t"
       - name: Run true two-process T1 contention proof against final delivery function
         run: bash tests/concurrency/001g_delivery_budget_atomic.sh
       - name: Run append-only delivery-resolution lifecycle proof
         run: psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f tests/sql/001g_delivery_resolution.sql
+      - name: Run active-attention visibility proof
+        run: psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f tests/sql/001g_attention_visibility.sql
       - name: Assert first-pass 001G migration contract
         run: psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f tests/sql/001g_migration_replay.sql
       - name: Reapply complete 001G migration chain
