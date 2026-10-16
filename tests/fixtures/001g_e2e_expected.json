@@ -1,0 +1,15 @@
+{
+  "materiality": "MATERIAL",
+  "redundancy": "NEW",
+  "eligibility": "ELIGIBLE",
+  "tier": "T2",
+  "adaptive_adjustment": 0,
+  "delivery": "DELIVER_IN_APP",
+  "action": "REVIEW_EVIDENCE",
+  "feedback": "HELPFUL",
+  "preference_changed": true,
+  "scientific_confidence_unchanged": true,
+  "safety_severity_unchanged": true,
+  "duplicate_eligibility": "SUPPRESS_DUPLICATE",
+  "policy_version": "001G-R1"
+}
