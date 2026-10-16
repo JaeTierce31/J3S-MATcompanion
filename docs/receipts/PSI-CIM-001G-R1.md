@@ -4,7 +4,7 @@
 **Policy version:** `001G-R1`  
 **Repository:** `JaeTierce31/J3S-MATcompanion`  
 **Source branch:** `psi-cim-001g-implementation`  
-**Certified source SHA:** `dcf1db097ded2aaf9200a053208f8366c5466e5b`  
+**Certified source SHA:** `26b6bda03fc260dd2046f153698d02b137f0b13b`  
 **Verdict:** **PASS — PSI-CIM-001G subsystem**  
 **Broader repository/product promotion:** **NOT implied by this PASS**
 
@@ -22,6 +22,7 @@ The following were executed against PostgreSQL 17 and/or disposable Neon branche
 - append-only delivery-resolution lifecycle, including T1 budget release after resolution;
 - automatic delivery resolution after a valid action outcome;
 - delivery-resolution idempotency and immutable receipt history;
+- active-attention visibility after resolution;
 - explicit + bounded behavioral usefulness learning;
 - rejection of dwell-time and other engagement-volume ranking signals;
 - smallest-sufficient-next-action selection;
@@ -33,11 +34,12 @@ The following were executed against PostgreSQL 17 and/or disposable Neon branche
 - governed `api_orchestration_receipt(uuid)` and `api_orchestration_attention()` execution retained for the dashboard role;
 - degraded adaptive fallback to deterministic tiering + neutral preference;
 - forged mutable `app.user_id` substitution rejection;
-- **20/20 constitutional invariants PASS after the delivery-resolution migration**;
+- **20/20 constitutional invariants PASS after delivery-resolution hardening**;
 - end-to-end synthetic orchestration fixture PASS;
 - clean 001G apply over a fresh child of the verified 001F runtime baseline PASS;
 - second full 001G replay over that baseline PASS;
-- complete no-secret PostgreSQL 17 migration-chain replay PASS through `001G_013`.
+- complete no-secret PostgreSQL 17 migration-chain first apply PASS;
+- complete no-secret PostgreSQL 17 second replay PASS.
 
 Implementation test branch: `br-calm-glitter-b8wnjuel`  
 Replay-cert branch: `br-snowy-sea-b8clvdpn`
@@ -45,21 +47,22 @@ Replay-cert branch: `br-snowy-sea-b8clvdpn`
 ## CI evidence
 
 GitHub Actions workflow: **PSI-CIM-001G Concurrency Certification**  
-Run: `38976335180`  
-Job: `117226566872`  
-Head SHA: `dcf1db097ded2aaf9200a053208f8366c5466e5b`  
+Run: `38976967567`  
+Job: `117228635760`  
+Head SHA: `26b6bda03fc260dd2046f153698d02b137f0b13b`  
 Conclusion: **SUCCESS**
 
 That run verified, in order:
 
 1. minimal pre-001G dependency baseline creation;
 2. complete actual `001G_*` migration chain application;
-3. presence of the final delivery-resolution oracle/view;
+3. presence of the final delivery-resolution migration;
 4. true two-process T1 contention against the final delivery function;
 5. append-only delivery-resolution lifecycle;
-6. first-pass migration contract;
-7. complete second `001G_*` replay;
-8. second replay contract.
+6. active-attention visibility behavior;
+7. first-pass migration contract;
+8. complete second `001G_*` replay;
+9. second replay contract.
 
 The standalone **PSI-CIM-001G Policy Smoke** workflow is intentionally only a policy-contract smoke test and is not treated as full subsystem certification.
 
@@ -98,10 +101,10 @@ bash scripts/replay_001g.sh
 bash scripts/verify_001g.sh
 ```
 
-`replay_001g.sh` applies all `001G_*` migrations twice and checks replay postconditions. `verify_001g.sh` runs component suites, delivery resolution, 20 invariants, E2E, authorization regression, and the two-process contention harness.
+`replay_001g.sh` applies all `001G_*` migrations twice and checks replay postconditions. `verify_001g.sh` runs component suites, delivery resolution, active-attention visibility, 20 invariants, E2E, authorization regression, and the two-process contention harness.
 
 ## Scope statement
 
-**PASS means:** the PSI-CIM-001G orchestration subsystem at certified source SHA `dcf1db097ded2aaf9200a053208f8366c5466e5b` satisfies its current deterministic/adaptive control, audit, concurrency, resolution, and authorization gates on the tested PostgreSQL 17 / verified-runtime surfaces.
+**PASS means:** the PSI-CIM-001G orchestration subsystem at certified source SHA `26b6bda03fc260dd2046f153698d02b137f0b13b` satisfies its current deterministic/adaptive control, audit, concurrency, resolution, visibility, and authorization gates on the tested PostgreSQL 17 / verified-runtime surfaces.
 
 **PASS does not mean:** full repository-from-zero certification, full production auth admission, merge approval, or production deployment approval.
