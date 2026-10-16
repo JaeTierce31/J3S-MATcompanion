@@ -1,12 +1,19 @@
 {
   "artifact": "PSI-CIM-001G-R1",
   "title": "Adaptive Insight Orchestration & Retention Loop",
-  "verdict": "CONDITIONAL_PASS",
+  "verdict": "PASS",
+  "verdict_scope": "PSI-CIM-001G subsystem only",
   "policy_version": "001G-R1",
   "source_repository": "JaeTierce31/J3S-MATcompanion",
   "source_branch": "psi-cim-001g-implementation",
-  "source_commit_sha": null,
-  "source_commit_sha_status": "Capture exact immutable SHA after final certification commit or CI run; branch is intentionally still moving and has not been merged.",
+  "certified_source_sha": "dcf1db097ded2aaf9200a053208f8366c5466e5b",
+  "ci": {
+    "workflow": "PSI-CIM-001G Concurrency Certification",
+    "run_id": 38976335180,
+    "job_id": 117226566872,
+    "head_sha": "dcf1db097ded2aaf9200a053208f8366c5466e5b",
+    "conclusion": "success"
+  },
   "runtime_project_id": "polished-resonance-55615569",
   "implementation_test_branch_id": "br-calm-glitter-b8wnjuel",
   "replay_test_branch_id": "br-snowy-sea-b8clvdpn",
@@ -19,23 +26,33 @@
     "eligibility_and_cooldown": true,
     "hard_priority_tiers": true,
     "bounded_adaptive_ranking": true,
-    "single_session_delivery_budget": true,
+    "true_two_independent_process_delivery_contention": true,
+    "delivery_resolution_append_only": true,
+    "delivery_resolution_releases_t1_budget": true,
+    "action_outcome_auto_resolves_delivery": true,
+    "delivery_resolution_idempotent": true,
+    "delivery_resolution_immutable": true,
     "usefulness_learning_boundary": true,
     "next_action_oracle": true,
     "action_closure": true,
     "audit_reconstruction": true,
     "degraded_mode": true,
-    "constitutional_invariants": "20/20 PASS",
+    "constitutional_invariants": "20/20 PASS after 001G_012",
     "end_to_end_orchestration": true,
     "authorization_regression": true,
+    "dashboard_direct_table_view_access_denied": true,
+    "dashboard_internal_001g_function_execution_denied": true,
+    "governed_orchestration_api_execution_retained": true,
+    "forged_app_user_id_substitution_rejected": true,
     "001g_apply_over_verified_001f_runtime_baseline": true,
-    "001g_second_full_replay_over_same_baseline": true
+    "001g_second_full_replay_over_same_baseline": true,
+    "complete_local_001g_chain_first_apply": true,
+    "complete_local_001g_chain_second_replay": true
   },
-  "unverified_or_blocked": {
-    "true_two_independent_connection_delivery_contention": "UNVERIFIED: race-free executable harness committed at tests/concurrency/001g_delivery_budget_atomic.sh but not executed in this chat harness.",
-    "repository_clean_from_zero_migration": "BLOCKED: repository does not contain canonical historical PSI-CIM-001D through 001F migrations; only 001G-over-verified-001F-runtime replay was certified.",
-    "production_valid_jwt_end_to_end": "OPEN inherited gate: forged mutable app.user_id substitution is rejected, but a production valid interactive JWT path was not re-certified by 001G.",
-    "final_immutable_source_sha": "OPEN until final certification commit/CI run because the feature branch is still being written."
+  "external_or_broader_gates": {
+    "repository_clean_from_zero_migration": "BLOCKED: canonical historical PSI-CIM-001D through 001F migrations are not present in this repository; the verified runtime replay starts from a verified 001F baseline, and local CI uses only minimal pre-001G dependency shapes.",
+    "production_valid_interactive_jwt_end_to_end": "OPEN inherited gate: forged mutable app.user_id substitution is rejected, but a complete production valid interactive JWT path was not re-certified by 001G.",
+    "merge_or_production_deployment": "NOT AUTHORIZED by this receipt."
   },
   "authority_boundary": {
     "learning_can_change_eligibility": false,
@@ -43,7 +60,8 @@
     "learning_can_change_safety_severity": false,
     "learning_can_change_authority_class": false,
     "reserved_actions_auto_execute": false,
-    "critical_safety_permanently_mutable_or_muteable": false
+    "critical_safety_permanently_muteable": false,
+    "dashboard_can_execute_internal_001g_mutations": false
   },
   "adaptive_policy": {
     "adaptive_min": -0.15,
@@ -52,5 +70,5 @@
     "t1_active_limit": 1,
     "t2_visible_limit": 3
   },
-  "promotion_rule": "Do not promote to full PASS until the two-independent-connection contention harness passes and an immutable source SHA is recorded. Clean-from-zero repository certification additionally requires canonical 001D-001F migration lineage to be added or reconciled."
+  "scope_statement": "PASS certifies the PSI-CIM-001G subsystem at the pinned source SHA on the tested PostgreSQL 17 / verified-runtime surfaces. It does not certify full repository-from-zero construction, production JWT admission, merge approval, or production deployment."
 }
