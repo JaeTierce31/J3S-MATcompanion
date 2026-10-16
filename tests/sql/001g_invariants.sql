@@ -86,16 +86,18 @@ BEGIN
   SELECT ed.reasons INTO elig_reasons FROM eligibility_decisions ed WHERE ed.candidate_id=c2 ORDER BY ed.evaluated_at DESC LIMIT 1;
   PERFORM pg_temp.assert_inv('INV-G-007',cls='EXACT_DUPLICATE' AND decision_text='SUPPRESS_DUPLICATE','duplicate was not suppressed');
   PERFORM pg_temp.assert_inv('INV-G-014',jsonb_array_length(elig_reasons)>0,'suppression lacked reason receipt');
-  INSERT INTO insight_candidates(user_id,candidate_type,subject_type,subject_id,proposed_title,proposed_summary,authority_class,direction,candidate_confidence,context_key,safety_relevance,source_signal_id)
-  VALUES (u,'change_detected','metric','00000000-0000-0000-0000-000000002020','Trend','Opposite','advisory','up',0.60,'inv-family','low',s) RETURNING id INTO c3;
-  SELECT psi_classify_candidate(c3) INTO cls;
-  SELECT psi_evaluate_eligibility(c3,now()) INTO decision_text;
-  PERFORM pg_temp.assert_inv('INV-G-008',cls='CONTRADICTION' AND decision_text='SUPERSEDE_EXISTING','contradiction suppressed as duplicate');
+
   INSERT INTO insight_candidates(user_id,candidate_type,subject_type,subject_id,proposed_title,proposed_summary,authority_class,direction,candidate_confidence,context_key,safety_relevance,source_signal_id)
   VALUES (u,'change_detected','metric','00000000-0000-0000-0000-000000002020','Trend revised','Material confidence revision','advisory','down',0.95,'inv-family','low',s) RETURNING id INTO c4;
   SELECT psi_classify_candidate(c4) INTO cls;
   SELECT matched_candidate_id INTO matched FROM redundancy_receipts WHERE candidate_id=c4;
   PERFORM pg_temp.assert_inv('INV-G-009',cls='MATERIAL_REVISION' AND matched IS NOT NULL,'material revision lost prior lineage');
+
+  INSERT INTO insight_candidates(user_id,candidate_type,subject_type,subject_id,proposed_title,proposed_summary,authority_class,direction,candidate_confidence,context_key,safety_relevance,source_signal_id)
+  VALUES (u,'change_detected','metric','00000000-0000-0000-0000-000000002020','Trend','Opposite','advisory','up',0.60,'inv-family','low',s) RETURNING id INTO c3;
+  SELECT psi_classify_candidate(c3) INTO cls;
+  SELECT psi_evaluate_eligibility(c3,now()) INTO decision_text;
+  PERFORM pg_temp.assert_inv('INV-G-008',cls='CONTRADICTION' AND decision_text='SUPERSEDE_EXISTING','contradiction suppressed as duplicate');
 
   INSERT INTO users DEFAULT VALUES RETURNING id INTO u;
   INSERT INTO insight_candidates(user_id,candidate_type,subject_type,subject_id,proposed_title,proposed_summary,authority_class)
