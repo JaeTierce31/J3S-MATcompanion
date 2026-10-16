@@ -2,6 +2,8 @@ DO $$
 DECLARE
   u uuid;
   i uuid;
+  a_type text; a_id uuid;
+  b_type text; b_id uuid;
   inter uuid;
   science_before numeric;
   science_after numeric;
@@ -13,10 +15,13 @@ DECLARE
   explicit_now numeric;
   explicit_future numeric;
 BEGIN
-  SELECT id INTO u FROM users ORDER BY created_at LIMIT 1;
-  SELECT id,confidence INTO i,science_before FROM personal_insights WHERE user_id=u ORDER BY generated_at LIMIT 1;
-  SELECT id,severity INTO inter,safety_before FROM interactions ORDER BY id LIMIT 1;
-  IF u IS NULL OR i IS NULL OR inter IS NULL THEN RAISE EXCEPTION '001D-001F runtime fixtures required'; END IF;
+  SELECT pi.user_id,pi.id,pi.confidence INTO u,i,science_before FROM personal_insights pi ORDER BY pi.generated_at LIMIT 1;
+  SELECT entity_type,entity_id INTO a_type,a_id FROM entity_registry ORDER BY entity_type,entity_id LIMIT 1;
+  SELECT entity_type,entity_id INTO b_type,b_id FROM entity_registry WHERE (entity_type,entity_id)<>(a_type,a_id) ORDER BY entity_type,entity_id LIMIT 1;
+  IF u IS NULL OR i IS NULL OR a_id IS NULL OR b_id IS NULL THEN RAISE EXCEPTION '001D-001F runtime fixtures required'; END IF;
+  INSERT INTO interactions(actor_a_type,actor_a_id,actor_b_type,actor_b_id,interaction_type,severity,confidence)
+  VALUES (a_type,a_id,b_type,b_id,'additive_effect','moderate',0.50)
+  RETURNING id,severity INTO inter,safety_before;
 
   PERFORM psi_record_usefulness_event(u,i,'OPENED_EVIDENCE','insight_evidence',now());
   SELECT psi_effective_preference(u,'research_detail',now()) INTO one_open;
