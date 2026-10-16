@@ -1,4 +1,4 @@
-name: PSI-CIM certify
+name: PSI-CIM-001G Policy Smoke
 
 on:
   pull_request:
@@ -6,7 +6,7 @@ on:
     branches: [main, psi-cim-001g-implementation]
 
 jobs:
-  certify:
+  policy-smoke:
     runs-on: ubuntu-latest
     services:
       postgres:
@@ -28,7 +28,11 @@ jobs:
       - uses: actions/checkout@v4
       - name: Install PostgreSQL client
         run: sudo apt-get update && sudo apt-get install -y postgresql-client
-      - name: Apply 001G policy migration
+      - name: Apply standalone 001G policy migration
         run: psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f db/migrations/001G_001_policy_config.sql
-      - name: Test 001G policy contract
+      - name: Test standalone 001G policy contract
         run: psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f tests/sql/001g_policy_config.sql
+      - name: State certification boundary
+        run: |
+          echo "This workflow is a standalone policy smoke test only."
+          echo "Full PSI-CIM-001G certification requires .github/workflows/psi-cim-001g-runtime-certify.yml against a disposable verified 001F runtime baseline."
