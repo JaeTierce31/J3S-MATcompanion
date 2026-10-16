@@ -8,6 +8,7 @@ DECLARE
   first_delivery uuid;
   r text;
   resolution_id uuid;
+  resolution_id_again uuid;
   open_count integer;
 BEGIN
   INSERT INTO users DEFAULT VALUES RETURNING id INTO u;
@@ -33,8 +34,23 @@ BEGIN
 
   SELECT psi_resolve_delivery(first_delivery,'resolved','test',NULL) INTO resolution_id;
   IF resolution_id IS NULL THEN RAISE EXCEPTION 'resolution receipt missing'; END IF;
+  SELECT psi_resolve_delivery(first_delivery,'resolved','test-repeat',NULL) INTO resolution_id_again;
+  IF resolution_id_again IS DISTINCT FROM resolution_id THEN RAISE EXCEPTION 'delivery resolution is not idempotent'; END IF;
   SELECT count(*) INTO open_count FROM v_delivery_current_state WHERE user_id=u AND tier='T1' AND currently_active;
   IF open_count <> 0 THEN RAISE EXCEPTION 'resolved T1 still consumes active budget'; END IF;
+
+  BEGIN
+    UPDATE delivery_resolution_events SET resolution_source='mutated' WHERE id=resolution_id;
+    RAISE EXCEPTION 'resolution receipt UPDATE unexpectedly succeeded';
+  EXCEPTION WHEN raise_exception THEN
+    IF SQLERRM='resolution receipt UPDATE unexpectedly succeeded' THEN RAISE; END IF;
+  END;
+  BEGIN
+    DELETE FROM delivery_resolution_events WHERE id=resolution_id;
+    RAISE EXCEPTION 'resolution receipt DELETE unexpectedly succeeded';
+  EXCEPTION WHEN raise_exception THEN
+    IF SQLERRM='resolution receipt DELETE unexpectedly succeeded' THEN RAISE; END IF;
+  END;
 
   INSERT INTO insight_candidates(user_id,candidate_type,subject_type,subject_id,proposed_title,proposed_summary,authority_class)
   VALUES (u,'experiment_result','experiment',gen_random_uuid(),'Third T1','Third T1','advisory') RETURNING id INTO c3;
