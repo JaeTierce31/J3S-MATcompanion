@@ -18,6 +18,7 @@ run_sql tests/sql/001g_learning.sql
 run_sql tests/sql/001g_next_action.sql
 run_sql tests/sql/001g_action_closure.sql
 run_sql tests/sql/001g_delivery_resolution.sql
+run_sql tests/sql/001g_attention_visibility.sql
 run_sql tests/sql/001g_auditability.sql
 run_sql tests/sql/001g_degraded_mode.sql
 run_sql tests/sql/001g_invariants.sql
