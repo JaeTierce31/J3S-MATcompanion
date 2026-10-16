@@ -1,0 +1,43 @@
+name: PSI-CIM-001G Concurrency Certification
+
+on:
+  pull_request:
+  push:
+    branches: [psi-cim-001g-implementation]
+
+jobs:
+  delivery-budget-contention:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: neondb
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d neondb"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    env:
+      DATABASE_URL: postgresql://postgres:postgres@localhost:5432/neondb
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install PostgreSQL client
+        run: sudo apt-get update && sudo apt-get install -y postgresql-client
+      - name: Create minimal pre-001G baseline
+        run: psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f tests/fixtures/001g_concurrency_baseline.sql
+      - name: Apply actual 001G migrations through delivery budget
+        shell: bash
+        run: |
+          set -euo pipefail
+          for migration in db/migrations/001G_00{1,2,3,4,5,6}_*.sql; do
+            echo "==> $migration"
+            psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f "$migration"
+          done
+      - name: Run true two-process T1 contention proof
+        run: bash tests/concurrency/001g_delivery_budget_atomic.sh
