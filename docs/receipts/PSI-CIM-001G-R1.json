@@ -1,0 +1,56 @@
+{
+  "artifact": "PSI-CIM-001G-R1",
+  "title": "Adaptive Insight Orchestration & Retention Loop",
+  "verdict": "CONDITIONAL_PASS",
+  "policy_version": "001G-R1",
+  "source_repository": "JaeTierce31/J3S-MATcompanion",
+  "source_branch": "psi-cim-001g-implementation",
+  "source_commit_sha": null,
+  "source_commit_sha_status": "Capture exact immutable SHA after final certification commit or CI run; branch is intentionally still moving and has not been merged.",
+  "runtime_project_id": "polished-resonance-55615569",
+  "implementation_test_branch_id": "br-calm-glitter-b8wnjuel",
+  "replay_test_branch_id": "br-snowy-sea-b8clvdpn",
+  "database": "neondb",
+  "postgres_version": 17,
+  "verified": {
+    "policy_contract": true,
+    "materiality_oracle": true,
+    "semantic_redundancy": true,
+    "eligibility_and_cooldown": true,
+    "hard_priority_tiers": true,
+    "bounded_adaptive_ranking": true,
+    "single_session_delivery_budget": true,
+    "usefulness_learning_boundary": true,
+    "next_action_oracle": true,
+    "action_closure": true,
+    "audit_reconstruction": true,
+    "degraded_mode": true,
+    "constitutional_invariants": "20/20 PASS",
+    "end_to_end_orchestration": true,
+    "authorization_regression": true,
+    "001g_apply_over_verified_001f_runtime_baseline": true,
+    "001g_second_full_replay_over_same_baseline": true
+  },
+  "unverified_or_blocked": {
+    "true_two_independent_connection_delivery_contention": "UNVERIFIED: race-free executable harness committed at tests/concurrency/001g_delivery_budget_atomic.sh but not executed in this chat harness.",
+    "repository_clean_from_zero_migration": "BLOCKED: repository does not contain canonical historical PSI-CIM-001D through 001F migrations; only 001G-over-verified-001F-runtime replay was certified.",
+    "production_valid_jwt_end_to_end": "OPEN inherited gate: forged mutable app.user_id substitution is rejected, but a production valid interactive JWT path was not re-certified by 001G.",
+    "final_immutable_source_sha": "OPEN until final certification commit/CI run because the feature branch is still being written."
+  },
+  "authority_boundary": {
+    "learning_can_change_eligibility": false,
+    "learning_can_change_scientific_certainty": false,
+    "learning_can_change_safety_severity": false,
+    "learning_can_change_authority_class": false,
+    "reserved_actions_auto_execute": false,
+    "critical_safety_permanently_mutable_or_muteable": false
+  },
+  "adaptive_policy": {
+    "adaptive_min": -0.15,
+    "adaptive_max": 0.15,
+    "behavioral_decay_days": 45,
+    "t1_active_limit": 1,
+    "t2_visible_limit": 3
+  },
+  "promotion_rule": "Do not promote to full PASS until the two-independent-connection contention harness passes and an immutable source SHA is recorded. Clean-from-zero repository certification additionally requires canonical 001D-001F migration lineage to be added or reconciled."
+}
