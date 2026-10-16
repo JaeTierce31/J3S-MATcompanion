@@ -58,6 +58,7 @@ DECLARE
   rr redundancy_receipts%ROWTYPE;
   mr materiality_receipts%ROWTYPE;
   cp psi_delivery_cooldown_policy%ROWTYPE;
+  active_policy psi_orchestration_policy%ROWTYPE;
   last_delivery timestamptz;
   muted_flag boolean := false;
   outcome text;
@@ -66,6 +67,7 @@ DECLARE
   safety_state text;
 BEGIN
   SELECT * INTO STRICT c FROM insight_candidates WHERE id=p_candidate_id;
+  SELECT * INTO STRICT active_policy FROM psi_active_orchestration_policy();
 
   SELECT * INTO rr FROM redundancy_receipts WHERE candidate_id=c.id ORDER BY evaluated_at DESC LIMIT 1;
   IF NOT FOUND THEN
@@ -113,7 +115,7 @@ BEGIN
       outcome := 'SUPPRESS_LOW_VALUE';
       reasons := reasons || '"below_materiality_threshold"'::jsonb;
     ELSE
-      SELECT * INTO cp FROM psi_delivery_cooldown_policy WHERE policy_version=c.policy_version AND candidate_type=c.candidate_type;
+      SELECT * INTO cp FROM psi_delivery_cooldown_policy WHERE policy_version=active_policy.policy_version AND candidate_type=c.candidate_type;
       IF FOUND AND cp.cooldown_interval > interval '0' THEN
         SELECT last_delivered_at INTO last_delivery FROM delivery_cooldown_state WHERE user_id=c.user_id AND cooldown_family=cp.cooldown_family;
         IF last_delivery IS NOT NULL AND p_now < last_delivery + cp.cooldown_interval THEN
@@ -132,7 +134,7 @@ BEGIN
   END IF;
 
   INSERT INTO eligibility_decisions(candidate_id,decision,reasons,materiality_result,duplicate_class,cooldown_state,authority_state,safety_state,policy_version,evaluated_at)
-  VALUES (c.id,outcome,reasons,mr.result,rr.classification,cooldown_state,c.authority_class,safety_state,c.policy_version,p_now);
+  VALUES (c.id,outcome,reasons,mr.result,rr.classification,cooldown_state,c.authority_class,safety_state,active_policy.policy_version,p_now);
 
   RETURN outcome;
 END;
