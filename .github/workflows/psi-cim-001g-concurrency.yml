@@ -31,13 +31,17 @@ jobs:
         run: sudo apt-get update && sudo apt-get install -y postgresql-client
       - name: Create minimal pre-001G baseline
         run: psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f tests/fixtures/001g_concurrency_baseline.sql
-      - name: Apply actual 001G migrations through delivery budget
+      - name: Apply complete actual 001G migration chain
         shell: bash
         run: |
           set -euo pipefail
-          for migration in db/migrations/001G_00{1,2,3,4,5,6}_*.sql; do
+          for migration in db/migrations/001G_*.sql; do
             echo "==> $migration"
             psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f "$migration"
           done
-      - name: Run true two-process T1 contention proof
+      - name: Verify final delivery-resolution migration is active
+        run: |
+          test "$(psql "$DATABASE_URL" -qAtv ON_ERROR_STOP=1 -c "SELECT to_regprocedure('psi_resolve_delivery(uuid,text,text,uuid)') IS NOT NULL")" = "t"
+          test "$(psql "$DATABASE_URL" -qAtv ON_ERROR_STOP=1 -c "SELECT to_regclass('public.v_delivery_current_state') IS NOT NULL")" = "t"
+      - name: Run true two-process T1 contention proof against final delivery function
         run: bash tests/concurrency/001g_delivery_budget_atomic.sh
