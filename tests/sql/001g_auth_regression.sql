@@ -7,6 +7,8 @@ BEGIN
     IF has_table_privilege('psi_dashboard_reader','priority_decisions','SELECT') THEN RAISE EXCEPTION 'dashboard reader has direct priority_decisions SELECT'; END IF;
     IF has_table_privilege('psi_dashboard_reader','usefulness_events','SELECT') THEN RAISE EXCEPTION 'dashboard reader has direct usefulness_events SELECT'; END IF;
     IF has_table_privilege('psi_dashboard_reader','next_action_decisions','SELECT') THEN RAISE EXCEPTION 'dashboard reader has direct next_action_decisions SELECT'; END IF;
+    IF has_table_privilege('psi_dashboard_reader','delivery_resolution_events','SELECT') THEN RAISE EXCEPTION 'dashboard reader has direct delivery_resolution_events SELECT'; END IF;
+    IF has_table_privilege('psi_dashboard_reader','v_delivery_current_state','SELECT') THEN RAISE EXCEPTION 'dashboard reader has direct delivery current-state SELECT'; END IF;
     IF has_table_privilege('psi_dashboard_reader','v_psi_orchestration_receipt','SELECT') THEN RAISE EXCEPTION 'dashboard reader has direct orchestration view SELECT'; END IF;
     IF NOT has_function_privilege('psi_dashboard_reader','api_orchestration_receipt(uuid)','EXECUTE') THEN RAISE EXCEPTION 'dashboard reader lacks receipt API execute'; END IF;
     IF NOT has_function_privilege('psi_dashboard_reader','api_orchestration_attention()','EXECUTE') THEN RAISE EXCEPTION 'dashboard reader lacks attention API execute'; END IF;
