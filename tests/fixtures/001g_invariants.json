@@ -1,0 +1,22 @@
+[
+  {"id":"INV-G-001","statement":"Learning cannot make an ineligible insight eligible.","test_case":"feedback_preserves_ineligible_state"},
+  {"id":"INV-G-002","statement":"Preference data cannot change scientific certainty.","test_case":"feedback_preserves_scientific_confidence"},
+  {"id":"INV-G-003","statement":"Preference data cannot alter safety severity.","test_case":"feedback_preserves_safety_severity"},
+  {"id":"INV-G-004","statement":"Preference data cannot change authority class.","test_case":"feedback_preserves_authority"},
+  {"id":"INV-G-005","statement":"Critical safety bypasses cooldown.","test_case":"critical_safety_bypasses_cooldown"},
+  {"id":"INV-G-006","statement":"Critical safety cannot be permanently muted.","test_case":"critical_safety_bypasses_mute"},
+  {"id":"INV-G-007","statement":"Exact duplicates never generate a new active insight.","test_case":"exact_duplicate_is_suppressed"},
+  {"id":"INV-G-008","statement":"Contradictions are never suppressed as duplicates.","test_case":"contradiction_supersedes"},
+  {"id":"INV-G-009","statement":"Material revisions preserve prior lineage.","test_case":"revision_has_matched_candidate"},
+  {"id":"INV-G-010","statement":"Cooldown affects delivery only.","test_case":"materiality_survives_cooldown"},
+  {"id":"INV-G-011","statement":"Adaptive ranking is bounded.","test_case":"adaptive_adjustment_clamped"},
+  {"id":"INV-G-012","statement":"Adaptive ranking cannot cross hard priority tiers unless explicit policy permits it.","test_case":"tier_order_is_lexicographic"},
+  {"id":"INV-G-013","statement":"Dwell time and engagement volume cannot drive ranking.","test_case":"dwell_time_rejected"},
+  {"id":"INV-G-014","statement":"Every suppression decision has a reason receipt.","test_case":"suppression_has_reason"},
+  {"id":"INV-G-015","statement":"Every delivered insight has a ranking receipt.","test_case":"delivery_references_priority"},
+  {"id":"INV-G-016","statement":"Every selected action has a policy receipt.","test_case":"action_decision_has_policy_version"},
+  {"id":"INV-G-017","statement":"One insight has at most one primary action.","test_case":"second_action_decision_rejected"},
+  {"id":"INV-G-018","statement":"NO_ACTION is a valid outcome.","test_case":"no_action_selected_for_resolved_uncertainty"},
+  {"id":"INV-G-019","statement":"Reserved actions never auto-execute.","test_case":"reserved_selects_escalation_without_execution"},
+  {"id":"INV-G-020","statement":"Learning is captured only from observable user response or completed state change.","test_case":"unrecognized_learning_signal_rejected_and_preclosure_emits_none"}
+]
