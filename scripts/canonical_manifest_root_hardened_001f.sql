@@ -58,19 +58,19 @@ WITH rels AS (
          a.privilege_type||':'||a.is_grantable::text
   FROM rels r
   JOIN pg_class c ON c.oid=r.oid
-  CROSS JOIN LATERAL aclexplode(COALESCE(c.relacl,acldefault(CASE WHEN c.relkind='S' THEN 's' ELSE 'r' END,c.relowner))) a
+  CROSS JOIN LATERAL aclexplode(COALESCE(c.relacl,acldefault('r'::"char",c.relowner))) a
   WHERE a.grantee=0 OR pg_get_userbyid(a.grantee) IN ('psi_dashboard_reader','authenticated')
   UNION ALL
   SELECT 'function_acl',f.proname||'('||f.args||')|'||CASE WHEN a.grantee=0 THEN 'PUBLIC' ELSE pg_get_userbyid(a.grantee) END,
          a.privilege_type||':'||a.is_grantable::text
   FROM funcs f
-  CROSS JOIN LATERAL aclexplode(COALESCE(f.proacl,acldefault('f',f.proowner))) a
+  CROSS JOIN LATERAL aclexplode(COALESCE(f.proacl,acldefault('f'::"char",f.proowner))) a
   WHERE a.grantee=0 OR pg_get_userbyid(a.grantee) IN ('psi_dashboard_reader','authenticated')
   UNION ALL
   SELECT 'schema_acl',n.nspname||'|'||CASE WHEN a.grantee=0 THEN 'PUBLIC' ELSE pg_get_userbyid(a.grantee) END,
          a.privilege_type||':'||a.is_grantable::text
   FROM pg_namespace n
-  CROSS JOIN LATERAL aclexplode(COALESCE(n.nspacl,acldefault('n',n.nspowner))) a
+  CROSS JOIN LATERAL aclexplode(COALESCE(n.nspacl,acldefault('n'::"char",n.nspowner))) a
   WHERE n.nspname IN ('public','auth')
     AND (a.grantee=0 OR pg_get_userbyid(a.grantee) IN ('psi_dashboard_reader','authenticated'))
 ), normalized AS (
