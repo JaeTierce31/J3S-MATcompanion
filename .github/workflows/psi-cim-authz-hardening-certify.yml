@@ -51,9 +51,10 @@ jobs:
           done
           actual="$(psql "$DATABASE_URL" -Atq -f scripts/canonical_manifest_root_001f.sql | tail -n 1)"
           test "$actual" = "$EXPECTED_001F_ROOT"
-      - name: Create authenticated client-role probe when absent
+      - name: Create production-boundary client/auth fixtures when absent
         run: |
           psql "$DATABASE_URL" -v ON_ERROR_STOP=1 <<'SQL'
+          CREATE SCHEMA IF NOT EXISTS auth;
           DO $$ BEGIN
             IF NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname='authenticated') THEN
               CREATE ROLE authenticated NOLOGIN;
