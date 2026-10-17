@@ -1,127 +1,135 @@
 # PSI-CIM-BASELINE-LINEAGE-001 — Recovered Baseline Lineage Manifest
 
-**Status:** recovery in progress; original artifacts recovered, clean-from-zero proof pending  
-**Verified runtime:** Neon project `polished-resonance-55615569`, branch `br-shiny-mode-b807pp2e`, database `neondb`, PostgreSQL 17  
-**Purpose:** recover canonical pre-001G lineage without fabricating historical migrations.
+**Status:** **Recovered originals + clean 001F baseline + post-lineage hardening VERIFIED; zero→001G integration pending**  
+**Verified runtime reference:** Neon project `polished-resonance-55615569`, branch `br-shiny-mode-b807pp2e`, database `neondb`, PostgreSQL 17  
+**Purpose:** recover canonical pre-001G lineage without fabricating historical migrations, then harden it without rewriting signed history.
+
+> The post-lineage H1–H4 hardening described below is currently certified in the repository/CI path. It has **not** been applied to the canonical Neon runtime branch referenced above.
 
 ## Recovery result
 
-Original packaged artifacts were recovered from the active working artifact store. The recovered packages are not reconstructed from memory.
+Original packaged artifacts were recovered from the active artifact store. They were not regenerated from memory or inferred from the runtime schema.
 
 | Stage | Package SHA-256 | Migration SHA-256 | Integrity |
 |---|---|---|---|
-| 001B R1 receipt | `6cb1d490772cc3c27f1c97c1f8a068d0dea7f1da7bb8cd84fad72d78dfa6bdca` | n/a | receipt file hashes PASS; Ed25519 artifact signature PASS |
-| 001C R1 runtime certification | `d64b15c5660a7c929d1920125f50ada5c1c776e7312f4586e4443a7468686647` | `001B_base.sql`: `e9b5704af817a7e2c7c6841010655c97e86bec27f3bc627a15e4648f786a8126`; `001C_runtime_hardening.sql`: `69d6b76a9723052a0e5fcecc8ed305738a553ad2bcbd00123151cb22d9f3ae7c` | every listed file hash PASS; Ed25519 artifact signature PASS |
-| 001D R1 | `bcdb937ca1830ae253c31feec2713a87e3f392c32fad428423c1a9cdd179a7e6` | `2cdadabf81970ac534643f32ba1441821794b7a790150d3f2c84475c900791e2` | every listed file hash PASS; Ed25519 artifact signature PASS |
-| 001E R1 | `f7bef6e47550d3b766c0db8284f8ea519664d614d9f04860c6b60934068c40a5` | `fda38fd5dfd57bed4d9bd7a0066acc582c0d8ab5cb4714966c7a50ab3e13bca9` | every listed file hash PASS; Ed25519 artifact signature PASS |
-| 001F R1 | `921edcfa4725537a387e4fd10f7decf7f543785176656ddad71339eab600e41f` | `5feeef146069191b989d8738f272f7abb69bbd096527e5bae32e6c3e539b2a04` | every listed file hash PASS; Ed25519 artifact signature PASS |
+| 001B R1 receipt | `6cb1d490772cc3c27f1c97c1f8a068d0dea7f1da7bb8cd84fad72d78dfa6bdca` | n/a | receipt hashes PASS; Ed25519 artifact signature PASS |
+| 001C R1 | `d64b15c5660a7c929d1920125f50ada5c1c776e7312f4586e4443a7468686647` | `001B_base.sql` `e9b5704af817a7e2c7c6841010655c97e86bec27f3bc627a15e4648f786a8126`; `001C_runtime_hardening.sql` `69d6b76a9723052a0e5fcecc8ed305738a553ad2bcbd00123151cb22d9f3ae7c` | all listed hashes PASS; signature PASS |
+| 001D R1 | `bcdb937ca1830ae253c31feec2713a87e3f392c32fad428423c1a9cdd179a7e6` | `2cdadabf81970ac534643f32ba1441821794b7a790150d3f2c84475c900791e2` | all listed hashes PASS; signature PASS |
+| 001E R1 | `f7bef6e47550d3b766c0db8284f8ea519664d614d9f04860c6b60934068c40a5` | `fda38fd5dfd57bed4d9bd7a0066acc582c0d8ab5cb4714966c7a50ab3e13bca9` | all listed hashes PASS; signature PASS |
+| 001F R1 | `921edcfa4725537a387e4fd10f7decf7f543785176656ddad71339eab600e41f` | `5feeef146069191b989d8738f272f7abb69bbd096527e5bae32e6c3e539b2a04` | all listed hashes PASS; signature PASS |
 
-The signatures use ephemeral artifact-integrity keys. They attest artifact bytes only; they are not organizational, legal, clinical, or human approval signatures.
+These Ed25519 signatures are **artifact-integrity signatures only**. The keys were ephemeral and are not organizational, legal, clinical, or human-approval signatures.
 
 ## Canonical 001B choice
 
-The earlier multi-file 001B DDL package is **superseded provenance**, not the clean-build base. Its concatenated SQL hash is `7a927c00d6395963e788332d73b3b8ddac2d2806ce9c1266db646fd6b41ea26d`.
+The earlier multi-file 001B DDL package is preserved as **superseded provenance**. The later signed 001C certification package carries the amended canonical `001B_base.sql`. It materially includes R1 entity registration, ontology mapping, stronger product/ingredient constraints, and replay/idempotency changes. Therefore the signed embedded `001B_base.sql` is the canonical recovered base.
 
-The later signed 001C certification package contains amended `migrations/001B_base.sql` with hash `e9b5704af817a7e2c7c6841010655c97e86bec27f3bc627a15e4648f786a8126`. It materially adds R1 changes including entity registration, ontology mappings, stronger product/ingredient constraints, and replay/idempotency hardening. Therefore that later signed file is the canonical base for recovery.
-
-## Recovered canonical order
+## Canonical lineage classes
 
 ```text
-000_roles.sql                     NEW compatibility repair
-001B_base.sql                     ORIGINAL signed recovered artifact
-001C_runtime_hardening.sql        ORIGINAL signed recovered artifact
-001D_longitudinal_intelligence.sql ORIGINAL signed recovered artifact
-001E_personal_intelligence.sql    ORIGINAL signed recovered artifact
-001F_delivery_read_model.sql      ORIGINAL signed recovered artifact
+000_roles.sql                        NEW_COMPATIBILITY_REPAIR
+001B_base.sql                        ORIGINAL_SIGNED_RECOVERED
+001C_runtime_hardening.sql           ORIGINAL_SIGNED_RECOVERED
+001D_longitudinal_intelligence.sql   ORIGINAL_SIGNED_RECOVERED
+001E_personal_intelligence.sql       ORIGINAL_SIGNED_RECOVERED
+001F_delivery_read_model.sql         ORIGINAL_SIGNED_RECOVERED
+001F_001_runtime_reconciliation.sql  RUNTIME_RECOVERED_RECONCILIATION
+001F_002_definition_reconciliation.sql RUNTIME_RECOVERED_RECONCILIATION
+001F_003_authz_rls_hardening.sql     POSTLINEAGE_HARDENING
+001F_004_function_acl_hardening.sql  POSTLINEAGE_HARDENING
+001F_005_late_table_rls_hardening.sql POSTLINEAGE_HARDENING
+001F_006_client_surface_hardening.sql POSTLINEAGE_HARDENING
 ```
 
-`000_roles.sql` is explicitly new. It repairs a historical clean-build ordering defect: signed `001B_base.sql` grants to `psi_dashboard_reader` before signed `001C_runtime_hardening.sql` creates that role. Historical signed files must not be edited to hide this defect.
+Historical signed files remain byte-for-byte preserved. `000_roles.sql` repairs the historical role-ordering defect without editing history.
 
-## Verified 001F runtime object inventory
+## Verified historical 001F baseline root
 
-Read-only catalog inspection of the verified 001F runtime currently reports:
+The exact recovered chain plus the separately labeled compatibility/reconciliation layer builds from an empty PostgreSQL 17 database to the verified historical 001F product state.
 
-- **46** public tables;
-- **17** public views;
-- **48** public non-extension functions;
-- **37** public triggers;
-- **7** RLS-enabled public tables;
-- **7** public RLS policies.
+**Historical manifest root:**
 
-Object-level fingerprints are generated from live PostgreSQL catalog definitions using SHA-256 over table columns/defaults + constraints + indexes + view SQL, `pg_get_functiondef()` for functions, and `pg_get_triggerdef()` for triggers. These fingerprints are evidence of the verified runtime state and will be used to compare the recovered clean build against the runtime baseline.
-
-### 001D objects evidenced by both receipt and runtime
-
-- `observation_daily_rollups`
-- `observation_weekly_rollups`
-- `experiment_protocols`
-- `experiment_checkins`
-- `claim_applicability_matrices`
-- `terminology_resolution_queue`
-- `user_auth_identities`
-- `v_user_metric_daily`
-- `v_user_metric_weekly`
-- `v_experiment_metric_windows`
-- `v_experiment_temporal_analytics`
-- `v_recommendation_trace_edges`
-- `v_personalized_knowledge_graph`
-- associated rollup/readiness/applicability/recommendation-trace API functions
-
-### 001E objects evidenced by both receipt and runtime
-
-- `personal_insights`
-- `insight_confidence_components`
-- `insight_evidence_links`
-- `attention_items`
-- `v_user_insight_feed`
-- `v_user_attention_queue`
-- `psi_insight_confidence(...)`
-- `psi_authority_guard(...)`
-- `api_dashboard_insights()`
-- `api_dashboard_attention()`
-
-### 001F objects evidenced by both receipt and runtime
-
-- `v_user_decision_feed`
-- `api_dashboard_decision_feed()`
-- governed identity path `auth.user_id() -> user_auth_identities -> PSI user -> decision feed`
-
-## Authorization audit findings
-
-### Verified safe today
-
-- `psi_dashboard_reader` has no direct SELECT/INSERT/UPDATE/DELETE privileges on the audited user-scoped 001D–001F tables.
-- `authenticated` likewise has no direct audited-table privileges.
-- No non-owner role currently has direct privileges on the seven RLS-protected core tables.
-- SECURITY DEFINER API functions revoke `PUBLIC` EXECUTE and grant the dashboard role explicitly.
-- SECURITY DEFINER functions pin `search_path`.
-- neither `public` nor `auth` schema is CREATE-writable by `PUBLIC`, `authenticated`, or `psi_dashboard_reader`; therefore the current SECURITY DEFINER search paths are not exposed to untrusted-schema hijacking.
-
-### Hardening defect discovered
-
-The seven historical RLS policies still use mutable session configuration:
-
-```sql
-user_id = current_setting('app.user_id', true)::uuid
+```text
+151|0edffd890d3b1347b9abdf73f108322e856cef28a5e88045e249fe3d44fb08b5
 ```
 
-while the governed 001D–001F API path has moved to verified Neon Auth identity resolution. This is not currently exploitable through the client roles because direct table privileges are revoked, but it is a latent authorization hazard if direct grants are ever added.
+This root fingerprints the historical product surface: relation definitions and RLS flags, non-extension function definitions, triggers, and policies, while excluding certification-only residue.
 
-**Required handling:** do not rewrite signed historical migrations. Create a new post-001F hardening migration that aligns RLS with `psi_current_user_from_auth()` / verified auth identity and adds regression tests proving mutable `app.user_id` cannot authorize table access.
+This historical root is intentionally frozen and is **not** rewritten to include later security hardening.
 
-## Secrets audit
+## Runtime reconciliation
 
-Recovered migration SQL contains no embedded credentials. `001C_runtime_hardening.sql` defines `psi_auth_keys(secret bytea)` but explicitly does not provision secrets; deployment/runtime keys were external.
+The recovered signed 001C migration contains the historical custom HMAC context path. The verified later runtime had already superseded those objects with Neon Auth / Better Auth identity resolution. `001F_001_runtime_reconciliation.sql` and `001F_002_definition_reconciliation.sql` are explicitly runtime-derived reconciliation, not historical originals. They converge the recovered chain to the independently verified 001F runtime definitions.
 
-## Open gates
+No reconstructed 001F schema snapshot is required: the original migrations are executable and recoverable.
 
-1. Import exact recovered migration bytes into this reconciliation branch or another immutable artifact store without reformatting.
-2. Run clean PostgreSQL 17 build from empty using `000_roles.sql` + recovered signed chain.
-3. Compare resulting object fingerprints against the verified 001F runtime manifest.
-4. Classify any differences as expected runtime integration objects, historical post-package drift, or defects.
-5. Run a second full replay from zero-built state.
-6. Only after the clean build and fingerprint comparison pass may repository clean-from-zero move from BLOCKED to PASS.
+## Authorization/security findings and fixes
 
-## Explicit non-claim
+The lineage audit found four meaningful hardening gaps. None justified altering the signed originals.
 
-No reconstructed 001F baseline snapshot is authorized or needed at this stage. Original migration artifacts have been recovered. A reconstructed snapshot should be considered only if exact-byte import or executable recovery of these originals becomes impossible.
+### H1 — core RLS authority
+
+Historical user-scope RLS used mutable `app.user_id`. `001F_003_authz_rls_hardening.sql` replaces those predicates with `psi_current_user_from_auth()` and verifies forged mutable session context cannot grant cross-user access.
+
+### H2/H4 — function and trusted-schema attack surface
+
+Internal invoker-rights PSI helpers inherited PostgreSQL's default `PUBLIC EXECUTE`; this was not a proven privilege escalation because direct table privileges were denied, but it broadened unnecessary client attack/abuse surface. `001F_004` and `001F_006` converge function ACLs so governed `api_*` functions remain the dashboard surface while internal helpers are denied to `PUBLIC`, `authenticated`, and dashboard roles. H4 also revokes client `CREATE` in trusted schemas used by SECURITY DEFINER code.
+
+### H3 — later-table RLS defense in depth
+
+Nine user-scoped 001D/001E tables did not originally have table-local RLS. `001F_005_late_table_rls_hardening.sql` enables RLS on all nine. Eight expose verified-auth SELECT-only policies; `user_auth_identities` remains direct deny-all with no permissive client policy. Canonical writes remain governed/owner paths.
+
+### SECURITY DEFINER search-path invariant
+
+All owner-created public SECURITY DEFINER PSI functions are asserted to pin a trusted `search_path` including `pg_temp`, and client roles are asserted unable to CREATE objects in the trusted `public`/`auth` schemas.
+
+## Hardened post-lineage 001F root
+
+After H1–H4, CI fingerprints product definitions plus RLS/policies, SECURITY DEFINER configuration, relevant function/relation ACLs, and trusted-schema ACLs.
+
+**Hardened root:**
+
+```text
+177|61d9ba2210293729a6076572c416431312efa06dc1f595d12adbaf503bf27ed8
+```
+
+The root was captured after the first H1–H4 apply and again after complete H1–H4 replay. The two values are byte-identical.
+
+**Authorization-hardening CI evidence:**
+- run `39014174287`
+- job `117342724655`
+- source SHA `d6a80d2dd322e2d5d0c2e6dd26a0335a1b54b15e`
+- result: **SUCCESS**
+
+Verified by that run:
+1. exact recovered migration hashes;
+2. clean PostgreSQL 17 historical 001F baseline root;
+3. H1–H4 first application;
+4. structural and behavioral authorization oracle;
+5. hardened 001F manifest root;
+6. complete H1–H4 replay;
+7. second oracle pass;
+8. identical hardened root after replay.
+
+The earlier RED run `39013573615` is retained as evidence that the strengthened test suite initially detected all nine missing late-table RLS boundaries before H3 was implemented.
+
+## Current promotion boundary
+
+**Verified now:**
+- original 001B–001F artifacts recovered and hash-verified;
+- no reconstructed snapshot required;
+- empty PostgreSQL 17 can build deterministically to the verified 001F product baseline;
+- historical 001F root is reproducible;
+- H1–H4 security hardening passes and replays idempotently;
+- hardened security root is reproducible.
+
+**Still required before Issue #2 can be closed as full clean-from-zero lineage PASS:**
+1. build an isolated integration branch from empty PostgreSQL 17 through recovered originals + compatibility/reconciliation + H1–H4 + the complete 001G chain;
+2. execute the full 001G invariant/E2E/concurrency/auth-regression suite on that integrated lineage;
+3. perform a complete second replay and prove the integrated state remains deterministic.
+
+Production valid-interactive-JWT admission remains **Issue #3**, a separate runtime/authentication gate.
+
+## Explicit deployment boundary
+
+H1–H4 are repository/CI-certified but **not applied to the referenced canonical Neon runtime branch by this work**. Applying them to that runtime is a separate consequential migration decision requiring explicit authorization.
