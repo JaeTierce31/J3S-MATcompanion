@@ -7,6 +7,7 @@ on:
       - 'db/migrations/**'
       - 'scripts/reconstruct_recovered_baseline.sh'
       - 'scripts/canonical_manifest_root_001f.sql'
+      - 'scripts/canonical_manifest_class_roots_001f.sql'
       - '.github/workflows/psi-cim-baseline-lineage-certify.yml'
       - 'docs/lineage/**'
   workflow_dispatch:
@@ -70,6 +71,10 @@ jobs:
           test "$(psql "$DATABASE_URL" -Atq -c "SELECT count(*) FROM pg_class WHERE relnamespace='public'::regnamespace AND relname IN ('psi_perf_results','psi_performance_results','psi_verification_results');")" = "0"
           test "$(psql "$DATABASE_URL" -Atq -c "SELECT count(*) FROM pg_proc p JOIN pg_namespace n ON n.oid=p.pronamespace WHERE n.nspname='public' AND p.proname='psi_record_test';")" = "0"
 
+      - name: Emit first-pass manifest class roots
+        run: |
+          psql "$DATABASE_URL" -Atq -f scripts/canonical_manifest_class_roots_001f.sql
+
       - name: Compare first-pass canonical object root
         run: |
           set -euo pipefail
@@ -93,6 +98,10 @@ jobs:
             echo "REPLAY $f"
             psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f "$f"
           done
+
+      - name: Emit second-pass manifest class roots
+        run: |
+          psql "$DATABASE_URL" -Atq -f scripts/canonical_manifest_class_roots_001f.sql
 
       - name: Compare second-pass canonical object root
         run: |
