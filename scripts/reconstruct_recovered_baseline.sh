@@ -7,14 +7,28 @@ mkdir -p "$OUT"
 
 reconstruct() {
   local name="$1" expected="$2"
+  local direct="$ROOT/$name.sql"
   local dir="$ROOT/$name"
-  [[ -d "$dir" ]] || { echo "missing archive directory: $dir" >&2; exit 2; }
-  cat "$dir"/*.b64part | base64 --decode > "$OUT/$name.sql"
+  local out="$OUT/$name.sql"
+
+  if [[ -f "$direct" ]]; then
+    cp "$direct" "$out"
+  elif [[ -d "$dir" ]]; then
+    shopt -s nullglob
+    local parts=("$dir"/*.b64part)
+    shopt -u nullglob
+    (( ${#parts[@]} > 0 )) || { echo "missing archive parts: $dir" >&2; exit 2; }
+    printf '%s\n' "${parts[@]}" | sort -V | xargs cat | base64 --decode > "$out"
+  else
+    echo "missing recovered artifact: $direct or $dir" >&2
+    exit 2
+  fi
+
   local actual
-  actual=$(sha256sum "$OUT/$name.sql" | awk '{print $1}')
+  actual=$(sha256sum "$out" | awk '{print $1}')
   if [[ "$actual" != "$expected" ]]; then
     echo "HASH MISMATCH $name expected=$expected actual=$actual" >&2
-    rm -f "$OUT/$name.sql"
+    rm -f "$out"
     exit 3
   fi
   echo "HASH PASS $name $actual"
