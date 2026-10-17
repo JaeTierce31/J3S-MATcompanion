@@ -14,30 +14,36 @@ DECLARE
   decayed numeric;
   explicit_now numeric;
   explicit_future numeric;
+  t timestamptz := '2026-10-17T00:00:00Z'::timestamptz;
 BEGIN
-  SELECT pi.user_id,pi.id,pi.confidence INTO u,i,science_before FROM personal_insights pi ORDER BY pi.generated_at LIMIT 1;
+  -- Isolate learning from any prior fixture state.
+  INSERT INTO users DEFAULT VALUES RETURNING id INTO u;
+  INSERT INTO personal_insights(user_id,insight_type,subject_type,title,summary,confidence,authority_class,status)
+  VALUES (u,'change_detected','test','Learning-order probe','Synthetic learning fixture',0.50,'informational','active')
+  RETURNING id,confidence INTO i,science_before;
+
   SELECT entity_type,entity_id INTO a_type,a_id FROM entity_registry ORDER BY entity_type,entity_id LIMIT 1;
   SELECT entity_type,entity_id INTO b_type,b_id FROM entity_registry WHERE (entity_type,entity_id)<>(a_type,a_id) ORDER BY entity_type,entity_id LIMIT 1;
-  IF u IS NULL OR i IS NULL OR a_id IS NULL OR b_id IS NULL THEN RAISE EXCEPTION '001D-001F runtime fixtures required'; END IF;
+  IF a_id IS NULL OR b_id IS NULL THEN RAISE EXCEPTION 'entity registry fixtures required'; END IF;
   INSERT INTO interactions(actor_a_type,actor_a_id,actor_b_type,actor_b_id,interaction_type,severity,confidence)
   VALUES (a_type,a_id,b_type,b_id,'additive_effect','moderate',0.50)
   RETURNING id,severity INTO inter,safety_before;
 
-  PERFORM psi_record_usefulness_event(u,i,'OPENED_EVIDENCE','insight_evidence',now());
-  SELECT psi_effective_preference(u,'research_detail',now()) INTO one_open;
-  IF one_open <= 0 OR one_open > 0.03 THEN RAISE EXCEPTION 'single evidence-open adjustment must be small, got %',one_open; END IF;
+  PERFORM psi_record_usefulness_event(u,i,'OPENED_EVIDENCE','insight_evidence',t);
+  SELECT psi_effective_preference(u,'research_detail',t) INTO one_open;
+  IF abs(one_open-0.02) > 0.0000001 THEN RAISE EXCEPTION 'single evidence-open adjustment expected 0.02, got %',one_open; END IF;
 
-  PERFORM psi_record_usefulness_event(u,i,'OPENED_EVIDENCE','insight_evidence',now());
-  PERFORM psi_record_usefulness_event(u,i,'OPENED_EVIDENCE','insight_evidence',now());
-  PERFORM psi_record_usefulness_event(u,i,'OPENED_EVIDENCE','insight_evidence',now());
-  SELECT psi_effective_preference(u,'research_detail',now()) INTO repeated_open;
-  IF repeated_open <= one_open THEN RAISE EXCEPTION 'repeated bounded behavior must exceed single signal'; END IF;
-  SELECT psi_effective_preference(u,'research_detail',now()+interval '90 days') INTO decayed;
-  IF decayed >= repeated_open THEN RAISE EXCEPTION 'behavioral preference must decay toward neutral'; END IF;
+  PERFORM psi_record_usefulness_event(u,i,'OPENED_EVIDENCE','insight_evidence',t);
+  PERFORM psi_record_usefulness_event(u,i,'OPENED_EVIDENCE','insight_evidence',t);
+  PERFORM psi_record_usefulness_event(u,i,'OPENED_EVIDENCE','insight_evidence',t);
+  SELECT psi_effective_preference(u,'research_detail',t) INTO repeated_open;
+  IF abs(repeated_open-0.08) > 0.0000001 THEN RAISE EXCEPTION 'four same-timestamp evidence opens expected 0.08, got %',repeated_open; END IF;
+  SELECT psi_effective_preference(u,'research_detail',t+interval '90 days') INTO decayed;
+  IF decayed >= repeated_open OR decayed <= 0 THEN RAISE EXCEPTION 'behavioral preference must decay toward neutral, got % from %',decayed,repeated_open; END IF;
 
-  PERFORM psi_record_usefulness_event(u,i,'SHOW_MORE_LIKE_THIS','explicit_control',now());
-  SELECT psi_effective_preference(u,'topic_affinity',now()) INTO explicit_now;
-  SELECT psi_effective_preference(u,'topic_affinity',now()+interval '365 days') INTO explicit_future;
+  PERFORM psi_record_usefulness_event(u,i,'SHOW_MORE_LIKE_THIS','explicit_control',t);
+  SELECT psi_effective_preference(u,'topic_affinity',t) INTO explicit_now;
+  SELECT psi_effective_preference(u,'topic_affinity',t+interval '365 days') INTO explicit_future;
   IF explicit_now <> explicit_future THEN RAISE EXCEPTION 'explicit preference must persist'; END IF;
 
   SELECT confidence INTO science_after FROM personal_insights WHERE id=i;
@@ -46,7 +52,7 @@ BEGIN
   IF safety_after IS DISTINCT FROM safety_before THEN RAISE EXCEPTION 'G-LEARN-003 safety severity changed'; END IF;
 
   BEGIN
-    PERFORM psi_record_usefulness_event(u,i,'DWELL_TIME','telemetry',now());
+    PERFORM psi_record_usefulness_event(u,i,'DWELL_TIME','telemetry',t);
     RAISE EXCEPTION 'dwell time accepted as usefulness signal';
   EXCEPTION WHEN invalid_parameter_value THEN NULL;
   END;
