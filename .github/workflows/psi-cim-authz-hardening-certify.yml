@@ -1,0 +1,62 @@
+name: PSI-CIM Post-001F Authorization Hardening
+
+on:
+  push:
+    branches: [psi-cim-baseline-lineage-001]
+    paths:
+      - 'db/migrations/001F_003_authz_rls_hardening.sql'
+      - 'db/migrations/001F_004_function_acl_hardening.sql'
+      - 'tests/sql/001f_authz_hardening.sql'
+      - '.github/workflows/psi-cim-authz-hardening-certify.yml'
+  workflow_dispatch:
+
+jobs:
+  authz-hardening:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: psi_authz
+        ports: ['5432:5432']
+        options: >-
+          --health-cmd "pg_isready -U postgres -d psi_authz"
+          --health-interval 5s --health-timeout 5s --health-retries 20
+    env:
+      DATABASE_URL: postgresql://postgres:postgres@localhost:5432/psi_authz
+      EXPECTED_001F_ROOT: '151|0edffd890d3b1347b9abdf73f108322e856cef28a5e88045e249fe3d44fb08b5'
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install PostgreSQL client
+        run: sudo apt-get update -qq && sudo apt-get install -y postgresql-client
+      - name: Reconstruct exact recovered migrations
+        run: bash scripts/reconstruct_recovered_baseline.sh db/migrations/recovered_archive .recovered-migrations
+      - name: Build exact verified 001F baseline
+        run: |
+          set -euo pipefail
+          psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f db/migrations/000_roles.sql
+          for f in \
+            .recovered-migrations/001B_base.sql \
+            .recovered-migrations/001C_runtime_hardening.sql \
+            .recovered-migrations/001D_longitudinal_intelligence.sql \
+            .recovered-migrations/001E_personal_intelligence.sql \
+            .recovered-migrations/001F_delivery_read_model.sql \
+            db/migrations/001F_001_runtime_reconciliation.sql \
+            db/migrations/001F_002_definition_reconciliation.sql
+          do
+            psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f "$f"
+          done
+          actual="$(psql "$DATABASE_URL" -Atq -f scripts/canonical_manifest_root_001f.sql | tail -n 1)"
+          test "$actual" = "$EXPECTED_001F_ROOT"
+      - name: Apply H1 verified-auth RLS hardening
+        run: psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f db/migrations/001F_003_authz_rls_hardening.sql
+      - name: Apply H2 internal-function ACL hardening
+        run: psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f db/migrations/001F_004_function_acl_hardening.sql
+      - name: Run authorization hardening oracle
+        run: psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f tests/sql/001f_authz_hardening.sql
+      - name: Replay H1/H2 and rerun oracle
+        run: |
+          psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f db/migrations/001F_003_authz_rls_hardening.sql
+          psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f db/migrations/001F_004_function_acl_hardening.sql
+          psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f tests/sql/001f_authz_hardening.sql
