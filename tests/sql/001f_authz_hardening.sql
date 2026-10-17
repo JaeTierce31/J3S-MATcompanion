@@ -15,9 +15,10 @@ BEGIN
   IF n<>0 THEN RAISE EXCEPTION 'AUTHZ_RLS_FAIL: % policies still mutable/unverified',n; END IF;
 END $$;
 
--- Defense-in-depth RLS: all later user-owned 001D/001E tables must also be protected.
+-- Defense-in-depth RLS: all later user-owned 001D/001E tables must be protected.
+-- System-owned identity mapping is direct deny-all; other late tables expose verified-auth SELECT only.
 DO $$
-DECLARE missing_rls integer; bad_policy integer;
+DECLARE missing_rls integer; read_policies integer; bad_policy integer; identity_policies integer;
 BEGIN
   SELECT count(*) INTO missing_rls
   FROM pg_class c JOIN pg_namespace n ON n.oid=c.relnamespace
@@ -30,19 +31,34 @@ BEGIN
     AND NOT c.relrowsecurity;
   IF missing_rls<>0 THEN RAISE EXCEPTION 'AUTHZ_LATE_RLS_FAIL: % later user-owned tables lack RLS',missing_rls; END IF;
 
+  SELECT count(*) INTO read_policies
+  FROM pg_policies
+  WHERE schemaname='public'
+    AND tablename IN (
+      'observation_daily_rollups','observation_weekly_rollups',
+      'experiment_protocols','experiment_checkins',
+      'personal_insights','insight_confidence_components','insight_evidence_links','attention_items'
+    )
+    AND cmd='SELECT';
+  IF read_policies<>8 THEN RAISE EXCEPTION 'AUTHZ_LATE_RLS_FAIL: expected 8 read policies, found %',read_policies; END IF;
+
   SELECT count(*) INTO bad_policy
   FROM pg_policies
   WHERE schemaname='public'
     AND tablename IN (
       'observation_daily_rollups','observation_weekly_rollups',
-      'experiment_protocols','experiment_checkins','user_auth_identities',
+      'experiment_protocols','experiment_checkins',
       'personal_insights','insight_confidence_components','insight_evidence_links','attention_items'
     )
-    AND (coalesce(qual,'') NOT ILIKE '%psi_current_user_from_auth()%'
-         OR coalesce(with_check,'') NOT ILIKE '%psi_current_user_from_auth()%'
-         OR coalesce(qual,'') ILIKE '%app.user_id%'
-         OR coalesce(with_check,'') ILIKE '%app.user_id%');
-  IF bad_policy<>0 THEN RAISE EXCEPTION 'AUTHZ_LATE_RLS_FAIL: % later-table policies are not verified-auth bound',bad_policy; END IF;
+    AND (cmd<>'SELECT'
+         OR coalesce(qual,'') NOT ILIKE '%psi_current_user_from_auth()%'
+         OR coalesce(qual,'') ILIKE '%app.user_id%');
+  IF bad_policy<>0 THEN RAISE EXCEPTION 'AUTHZ_LATE_RLS_FAIL: % late-table policies violate verified-auth read-only contract',bad_policy; END IF;
+
+  SELECT count(*) INTO identity_policies
+  FROM pg_policies
+  WHERE schemaname='public' AND tablename='user_auth_identities';
+  IF identity_policies<>0 THEN RAISE EXCEPTION 'AUTHZ_IDENTITY_RLS_FAIL: identity map has % permissive policies; expected deny-all',identity_policies; END IF;
 END $$;
 
 -- Function ACL oracle: no internal non-extension PSI function may remain client executable.
@@ -206,7 +222,7 @@ BEGIN
   BEGIN
     INSERT INTO personal_insights(user_id,insight_type,subject_type,title,summary,authority_class,status)
     VALUES('00000000-0000-0000-0000-0000000000b2','change_detected','test','forged','forged','informational','active');
-    RAISE EXCEPTION 'AUTHZ_LATE_RLS_FAIL: cross-user personal insight insert unexpectedly succeeded';
+    RAISE EXCEPTION 'AUTHZ_LATE_RLS_FAIL: direct personal-insight write unexpectedly succeeded';
   EXCEPTION WHEN insufficient_privilege THEN NULL;
   END;
 END $$;
