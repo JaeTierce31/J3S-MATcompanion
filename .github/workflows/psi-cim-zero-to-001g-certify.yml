@@ -1,0 +1,131 @@
+name: PSI-CIM Zero-to-001G Integration Certification
+
+on:
+  push:
+    branches: [psi-cim-zero-to-001g-integration]
+    paths:
+      - 'db/migrations/**'
+      - 'tests/**'
+      - 'scripts/**'
+      - '.github/workflows/psi-cim-zero-to-001g-certify.yml'
+  workflow_dispatch:
+
+jobs:
+  zero-to-001g:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: psi_zero_001g
+        ports: ['5432:5432']
+        options: >-
+          --health-cmd "pg_isready -U postgres -d psi_zero_001g"
+          --health-interval 5s --health-timeout 5s --health-retries 20
+    env:
+      DATABASE_URL: postgresql://postgres:postgres@localhost:5432/psi_zero_001g
+      EXPECTED_001F_ROOT: '151|0edffd890d3b1347b9abdf73f108322e856cef28a5e88045e249fe3d44fb08b5'
+      EXPECTED_HARDENED_001F_ROOT: '177|61d9ba2210293729a6076572c416431312efa06dc1f595d12adbaf503bf27ed8'
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install PostgreSQL client
+        run: sudo apt-get update -qq && sudo apt-get install -y postgresql-client
+      - name: Reconstruct exact recovered signed migrations
+        run: bash scripts/reconstruct_recovered_baseline.sh db/migrations/recovered_archive .recovered-migrations
+      - name: Apply recovered historical chain and reconciliation from zero
+        run: |
+          set -euo pipefail
+          psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f db/migrations/000_roles.sql
+          for f in \
+            .recovered-migrations/001B_base.sql \
+            .recovered-migrations/001C_runtime_hardening.sql \
+            .recovered-migrations/001D_longitudinal_intelligence.sql \
+            .recovered-migrations/001E_personal_intelligence.sql \
+            .recovered-migrations/001F_delivery_read_model.sql \
+            db/migrations/001F_001_runtime_reconciliation.sql \
+            db/migrations/001F_002_definition_reconciliation.sql
+          do
+            echo "APPLY $f"; psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f "$f"
+          done
+          root="$(psql "$DATABASE_URL" -Atq -f scripts/canonical_manifest_root_001f.sql | tail -n 1)"
+          echo "historical_001f_root=$root"
+          test "$root" = "$EXPECTED_001F_ROOT"
+      - name: Create production-boundary auth/client fixtures
+        run: |
+          psql "$DATABASE_URL" -v ON_ERROR_STOP=1 <<'SQL'
+          CREATE SCHEMA IF NOT EXISTS auth;
+          CREATE OR REPLACE FUNCTION auth.user_id() RETURNS text
+          LANGUAGE sql STABLE AS $$ SELECT nullif(current_setting('request.jwt.claim.sub',true),'') $$;
+          REVOKE ALL ON FUNCTION auth.user_id() FROM PUBLIC;
+          DO $$ BEGIN
+            IF NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname='authenticated') THEN
+              CREATE ROLE authenticated NOLOGIN;
+            END IF;
+          END $$;
+          SQL
+      - name: Apply post-lineage H1-H4 hardening
+        run: |
+          set -euo pipefail
+          for f in \
+            db/migrations/001F_003_authz_rls_hardening.sql \
+            db/migrations/001F_004_function_acl_hardening.sql \
+            db/migrations/001F_005_late_table_rls_hardening.sql \
+            db/migrations/001F_006_client_surface_hardening.sql
+          do
+            psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f "$f"
+          done
+          psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f tests/sql/001f_authz_hardening.sql
+          root="$(psql "$DATABASE_URL" -Atq -f scripts/canonical_manifest_root_hardened_001f.sql | tail -n 1)"
+          echo "hardened_001f_root=$root"
+          test "$root" = "$EXPECTED_HARDENED_001F_ROOT"
+      - name: Apply complete certified 001G chain
+        run: |
+          set -euo pipefail
+          for f in db/migrations/001G_*.sql; do
+            echo "APPLY $f"; psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f "$f"
+          done
+      - name: Run full 001G verification suite
+        run: bash scripts/verify_001g.sh
+      - name: Enforce inherited hardened authorization boundary after 001G
+        run: psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f tests/sql/001f_authz_hardening.sql
+      - name: Capture integrated schema-security root
+        run: |
+          set -euo pipefail
+          root="$(psql "$DATABASE_URL" -Atq -f scripts/canonical_manifest_root_hardened_001f.sql | tail -n 1)"
+          test -n "$root"
+          echo "INTEGRATED_ROOT=$root" >> "$GITHUB_ENV"
+          echo "INTEGRATED_ROOT=$root"
+      - name: Replay complete zero-to-001G chain
+        run: |
+          set -euo pipefail
+          psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f db/migrations/000_roles.sql
+          for f in \
+            .recovered-migrations/001B_base.sql \
+            .recovered-migrations/001C_runtime_hardening.sql \
+            .recovered-migrations/001D_longitudinal_intelligence.sql \
+            .recovered-migrations/001E_personal_intelligence.sql \
+            .recovered-migrations/001F_delivery_read_model.sql \
+            db/migrations/001F_001_runtime_reconciliation.sql \
+            db/migrations/001F_002_definition_reconciliation.sql \
+            db/migrations/001F_003_authz_rls_hardening.sql \
+            db/migrations/001F_004_function_acl_hardening.sql \
+            db/migrations/001F_005_late_table_rls_hardening.sql \
+            db/migrations/001F_006_client_surface_hardening.sql
+          do
+            echo "REPLAY $f"; psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f "$f"
+          done
+          for f in db/migrations/001G_*.sql; do
+            echo "REPLAY $f"; psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f "$f"
+          done
+          psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f tests/sql/001f_authz_hardening.sql
+          replay_root="$(psql "$DATABASE_URL" -Atq -f scripts/canonical_manifest_root_hardened_001f.sql | tail -n 1)"
+          echo "INTEGRATED_REPLAY_ROOT=$replay_root"
+          test "$replay_root" = "$INTEGRATED_ROOT"
+      - name: Re-run core 001G invariant, E2E, auth and contention gates after replay
+        run: |
+          set -euo pipefail
+          psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f tests/sql/001g_invariants.sql
+          psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f tests/sql/001g_e2e.sql
+          psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f tests/sql/001g_auth_regression.sql
+          bash tests/concurrency/001g_delivery_budget_atomic.sh
