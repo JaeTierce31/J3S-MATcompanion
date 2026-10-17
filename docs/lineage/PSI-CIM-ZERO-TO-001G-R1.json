@@ -1,0 +1,82 @@
+{
+  "artifact": "PSI-CIM-ZERO-TO-001G-R1",
+  "verdict": "PASS",
+  "verdict_scope": "repository_and_CI_clean_from_zero_lineage_through_001G",
+  "repository": "JaeTierce31/J3S-MATcompanion",
+  "branch": "psi-cim-zero-to-001g-integration",
+  "certified_source_sha": "9075794a4966ce267b66cd88e5c1ad9815be6545",
+  "ci": {
+    "workflow": "PSI-CIM Zero-to-001G Integration Certification",
+    "run_id": 39014998981,
+    "job_id": 117345181747,
+    "conclusion": "success"
+  },
+  "postgres_version": 17,
+  "roots": {
+    "historical_verified_001f": "151|0edffd890d3b1347b9abdf73f108322e856cef28a5e88045e249fe3d44fb08b5",
+    "postlineage_hardened_001f": "177|61d9ba2210293729a6076572c416431312efa06dc1f595d12adbaf503bf27ed8",
+    "integrated_zero_to_001g": "238|183a767bb4ad935910054f5526c648f3b5b24957a3064aa32ad8ee2e5aca6465",
+    "integrated_zero_to_001g_after_full_replay": "238|183a767bb4ad935910054f5526c648f3b5b24957a3064aa32ad8ee2e5aca6465",
+    "replay_identical": true
+  },
+  "recovered_original_migrations": {
+    "001B_base.sql": "e9b5704af817a7e2c7c6841010655c97e86bec27f3bc627a15e4648f786a8126",
+    "001C_runtime_hardening.sql": "69d6b76a9723052a0e5fcecc8ed305738a553ad2bcbd00123151cb22d9f3ae7c",
+    "001D_longitudinal_intelligence.sql": "2cdadabf81970ac534643f32ba1441821794b7a790150d3f2c84475c900791e2",
+    "001E_personal_intelligence.sql": "fda38fd5dfd57bed4d9bd7a0066acc582c0d8ab5cb4714966c7a50ab3e13bca9",
+    "001F_delivery_read_model.sql": "5feeef146069191b989d8738f272f7abb69bbd096527e5bae32e6c3e539b2a04"
+  },
+  "postlineage_001f_hardening": [
+    "001F_003_authz_rls_hardening.sql",
+    "001F_004_function_acl_hardening.sql",
+    "001F_005_late_table_rls_hardening.sql",
+    "001F_006_client_surface_hardening.sql"
+  ],
+  "integration_fixes": {
+    "001G_015_integrated_security_convergence.sql": {
+      "class": "post_certification_security_convergence",
+      "reason": "Preserve hardened SECURITY DEFINER search-path, function ACL, and trusted-schema boundaries after 001G adds/recreates functions."
+    },
+    "001G_016_preference_revision_ordering.sql": {
+      "class": "post_certification_determinism_fix",
+      "reason": "Replace random-UUID same-timestamp preference ordering with monotonic revision ordering."
+    }
+  },
+  "verified": {
+    "empty_postgresql17_to_historical_001f": true,
+    "historical_001f_root_match": true,
+    "h1_h4_first_apply": true,
+    "hardened_001f_authorization_oracle": true,
+    "hardened_001f_root_match": true,
+    "complete_001g_chain_apply": true,
+    "full_001g_verifier": true,
+    "constitutional_invariants": "20/20 PASS",
+    "end_to_end_orchestration": true,
+    "authorization_regression": true,
+    "true_two_process_delivery_contention": true,
+    "inherited_hardened_authz_after_001g": true,
+    "complete_zero_to_001g_replay": true,
+    "integrated_root_identical_after_replay": true,
+    "post_replay_invariants": "20/20 PASS",
+    "post_replay_e2e": true,
+    "post_replay_auth_regression": true,
+    "post_replay_contention": true
+  },
+  "authority_boundary": {
+    "mutable_app_user_id_can_override_verified_identity": false,
+    "internal_helpers_client_executable": false,
+    "dashboard_internal_mutation_execution": false,
+    "client_create_in_trusted_schemas": false,
+    "learning_can_change_scientific_certainty": false,
+    "learning_can_change_safety_severity": false,
+    "learning_can_change_authority_class": false
+  },
+  "external_open_gates": {
+    "production_valid_interactive_jwt_e2e": "OPEN — Issue #3",
+    "production_schema_migration": "NOT AUTHORIZED",
+    "merge_to_main": "NOT AUTHORIZED",
+    "production_deployment": "NOT AUTHORIZED"
+  },
+  "canonical_neon_runtime_mutated_by_this_certification": false,
+  "reconstructed_001f_snapshot_required": false
+}
