@@ -187,18 +187,20 @@ SET ROLE psi_rls_probe;
 SELECT set_config('request.jwt.claim.sub','sub-a',false);
 SELECT set_config('app.user_id','00000000-0000-0000-0000-0000000000b2',false);
 DO $$
-DECLARE n integer;
 BEGIN
-  SELECT count(*) INTO n FROM goals;
-  IF n<>1 OR EXISTS(SELECT 1 FROM goals WHERE user_id<>'00000000-0000-0000-0000-0000000000a1') THEN
+  IF NOT EXISTS(SELECT 1 FROM goals WHERE id='10000000-0000-0000-0000-0000000000a1')
+     OR EXISTS(SELECT 1 FROM goals WHERE id='10000000-0000-0000-0000-0000000000b2')
+     OR EXISTS(SELECT 1 FROM goals WHERE user_id<>'00000000-0000-0000-0000-0000000000a1') THEN
     RAISE EXCEPTION 'AUTHZ_RLS_FAIL: forged app.user_id changed core visibility';
   END IF;
-  SELECT count(*) INTO n FROM personal_insights;
-  IF n<>1 OR EXISTS(SELECT 1 FROM personal_insights WHERE user_id<>'00000000-0000-0000-0000-0000000000a1') THEN
+  IF NOT EXISTS(SELECT 1 FROM personal_insights WHERE id='20000000-0000-0000-0000-0000000000a1')
+     OR EXISTS(SELECT 1 FROM personal_insights WHERE id='20000000-0000-0000-0000-0000000000b2')
+     OR EXISTS(SELECT 1 FROM personal_insights WHERE user_id<>'00000000-0000-0000-0000-0000000000a1') THEN
     RAISE EXCEPTION 'AUTHZ_LATE_RLS_FAIL: cross-user personal insight visible';
   END IF;
-  SELECT count(*) INTO n FROM observation_daily_rollups;
-  IF n<>1 OR EXISTS(SELECT 1 FROM observation_daily_rollups WHERE user_id<>'00000000-0000-0000-0000-0000000000a1') THEN
+  IF NOT EXISTS(SELECT 1 FROM observation_daily_rollups WHERE user_id='00000000-0000-0000-0000-0000000000a1' AND metric='probe' AND day='2026-10-16')
+     OR EXISTS(SELECT 1 FROM observation_daily_rollups WHERE user_id='00000000-0000-0000-0000-0000000000b2' AND metric='probe' AND day='2026-10-16')
+     OR EXISTS(SELECT 1 FROM observation_daily_rollups WHERE user_id<>'00000000-0000-0000-0000-0000000000a1') THEN
     RAISE EXCEPTION 'AUTHZ_LATE_RLS_FAIL: cross-user rollup visible';
   END IF;
 END $$;
