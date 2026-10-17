@@ -43,7 +43,9 @@ jobs:
             echo "APPLY $f"; psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f "$f";
           done
       - name: Apply runtime-recovered reconciliation
-        run: psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f db/migrations/001F_001_runtime_reconciliation.sql
+        run: |
+          psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f db/migrations/001F_001_runtime_reconciliation.sql
+          psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f db/migrations/001F_002_definition_reconciliation.sql
       - name: Assert reconciliation classification
         run: |
           set -euo pipefail
@@ -64,7 +66,7 @@ jobs:
         run: |
           set -euo pipefail
           psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f db/migrations/000_roles.sql
-          for f in .recovered-migrations/001B_base.sql .recovered-migrations/001C_runtime_hardening.sql .recovered-migrations/001D_longitudinal_intelligence.sql .recovered-migrations/001E_personal_intelligence.sql .recovered-migrations/001F_delivery_read_model.sql db/migrations/001F_001_runtime_reconciliation.sql; do
+          for f in .recovered-migrations/001B_base.sql .recovered-migrations/001C_runtime_hardening.sql .recovered-migrations/001D_longitudinal_intelligence.sql .recovered-migrations/001E_personal_intelligence.sql .recovered-migrations/001F_delivery_read_model.sql db/migrations/001F_001_runtime_reconciliation.sql db/migrations/001F_002_definition_reconciliation.sql; do
             echo "REPLAY $f"; psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f "$f";
           done
       - name: Emit second-pass manifest class roots
