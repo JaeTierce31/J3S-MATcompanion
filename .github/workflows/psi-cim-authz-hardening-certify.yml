@@ -6,6 +6,8 @@ on:
     paths:
       - 'db/migrations/001F_003_authz_rls_hardening.sql'
       - 'db/migrations/001F_004_function_acl_hardening.sql'
+      - 'db/migrations/001F_005_late_table_rls_hardening.sql'
+      - 'db/migrations/001F_006_client_surface_hardening.sql'
       - 'tests/sql/001f_authz_hardening.sql'
       - '.github/workflows/psi-cim-authz-hardening-certify.yml'
   workflow_dispatch:
@@ -49,14 +51,29 @@ jobs:
           done
           actual="$(psql "$DATABASE_URL" -Atq -f scripts/canonical_manifest_root_001f.sql | tail -n 1)"
           test "$actual" = "$EXPECTED_001F_ROOT"
+      - name: Create authenticated client-role probe when absent
+        run: |
+          psql "$DATABASE_URL" -v ON_ERROR_STOP=1 <<'SQL'
+          DO $$ BEGIN
+            IF NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname='authenticated') THEN
+              CREATE ROLE authenticated NOLOGIN;
+            END IF;
+          END $$;
+          SQL
       - name: Apply H1 verified-auth RLS hardening
         run: psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f db/migrations/001F_003_authz_rls_hardening.sql
       - name: Apply H2 internal-function ACL hardening
         run: psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f db/migrations/001F_004_function_acl_hardening.sql
+      - name: Apply H3 late-table RLS hardening
+        run: psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f db/migrations/001F_005_late_table_rls_hardening.sql
+      - name: Apply H4 client-surface hardening
+        run: psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f db/migrations/001F_006_client_surface_hardening.sql
       - name: Run authorization hardening oracle
         run: psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f tests/sql/001f_authz_hardening.sql
-      - name: Replay H1/H2 and rerun oracle
+      - name: Replay H1-H4 and rerun oracle
         run: |
           psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f db/migrations/001F_003_authz_rls_hardening.sql
           psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f db/migrations/001F_004_function_acl_hardening.sql
+          psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f db/migrations/001F_005_late_table_rls_hardening.sql
+          psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f db/migrations/001F_006_client_surface_hardening.sql
           psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f tests/sql/001f_authz_hardening.sql
