@@ -9,6 +9,7 @@ on:
       - 'db/migrations/001F_005_late_table_rls_hardening.sql'
       - 'db/migrations/001F_006_client_surface_hardening.sql'
       - 'tests/sql/001f_authz_hardening.sql'
+      - 'scripts/canonical_manifest_root_hardened_001f.sql'
       - '.github/workflows/psi-cim-authz-hardening-certify.yml'
   workflow_dispatch:
 
@@ -71,10 +72,21 @@ jobs:
         run: psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f db/migrations/001F_006_client_surface_hardening.sql
       - name: Run authorization hardening oracle
         run: psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f tests/sql/001f_authz_hardening.sql
+      - name: Capture hardened 001F security manifest root
+        run: |
+          set -euo pipefail
+          root="$(psql "$DATABASE_URL" -Atq -f scripts/canonical_manifest_root_hardened_001f.sql | tail -n 1)"
+          test -n "$root"
+          echo "HARDENED_001F_ROOT=$root" >> "$GITHUB_ENV"
+          echo "HARDENED_001F_ROOT=$root"
       - name: Replay H1-H4 and rerun oracle
         run: |
+          set -euo pipefail
           psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f db/migrations/001F_003_authz_rls_hardening.sql
           psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f db/migrations/001F_004_function_acl_hardening.sql
           psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f db/migrations/001F_005_late_table_rls_hardening.sql
           psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f db/migrations/001F_006_client_surface_hardening.sql
           psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f tests/sql/001f_authz_hardening.sql
+          replay_root="$(psql "$DATABASE_URL" -Atq -f scripts/canonical_manifest_root_hardened_001f.sql | tail -n 1)"
+          test "$replay_root" = "$HARDENED_001F_ROOT"
+          echo "HARDENED_001F_REPLAY_ROOT=$replay_root"
