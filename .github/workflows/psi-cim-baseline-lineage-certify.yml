@@ -8,6 +8,7 @@ on:
       - 'scripts/reconstruct_recovered_baseline.sh'
       - 'scripts/canonical_manifest_root_001f.sql'
       - 'scripts/canonical_manifest_class_roots_001f.sql'
+      - 'scripts/canonical_manifest_fingerprints_001f.sql'
       - '.github/workflows/psi-cim-baseline-lineage-certify.yml'
       - 'docs/lineage/**'
   workflow_dispatch:
@@ -21,48 +22,28 @@ jobs:
         env:
           POSTGRES_PASSWORD: postgres
           POSTGRES_DB: psi_zero
-        ports:
-          - 5432:5432
+        ports: ['5432:5432']
         options: >-
           --health-cmd "pg_isready -U postgres -d psi_zero"
-          --health-interval 5s
-          --health-timeout 5s
-          --health-retries 20
+          --health-interval 5s --health-timeout 5s --health-retries 20
     env:
       DATABASE_URL: postgresql://postgres:postgres@localhost:5432/psi_zero
       EXPECTED_001F_ROOT: '151|0edffd890d3b1347b9abdf73f108322e856cef28a5e88045e249fe3d44fb08b5'
-
     steps:
       - uses: actions/checkout@v4
-
       - name: Install PostgreSQL client
-        run: |
-          sudo apt-get update -qq
-          sudo apt-get install -y postgresql-client
-
+        run: sudo apt-get update -qq && sudo apt-get install -y postgresql-client
       - name: Reconstruct and verify exact recovered migrations
-        run: |
-          bash scripts/reconstruct_recovered_baseline.sh db/migrations/recovered_archive .recovered-migrations
-
+        run: bash scripts/reconstruct_recovered_baseline.sh db/migrations/recovered_archive .recovered-migrations
       - name: Apply compatibility prelude and original recovered chain
         run: |
           set -euo pipefail
           psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f db/migrations/000_roles.sql
-          for f in \
-            .recovered-migrations/001B_base.sql \
-            .recovered-migrations/001C_runtime_hardening.sql \
-            .recovered-migrations/001D_longitudinal_intelligence.sql \
-            .recovered-migrations/001E_personal_intelligence.sql \
-            .recovered-migrations/001F_delivery_read_model.sql
-          do
-            echo "APPLY $f"
-            psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f "$f"
+          for f in .recovered-migrations/001B_base.sql .recovered-migrations/001C_runtime_hardening.sql .recovered-migrations/001D_longitudinal_intelligence.sql .recovered-migrations/001E_personal_intelligence.sql .recovered-migrations/001F_delivery_read_model.sql; do
+            echo "APPLY $f"; psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f "$f";
           done
-
       - name: Apply runtime-recovered reconciliation
-        run: |
-          psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f db/migrations/001F_001_runtime_reconciliation.sql
-
+        run: psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f db/migrations/001F_001_runtime_reconciliation.sql
       - name: Assert reconciliation classification
         run: |
           set -euo pipefail
@@ -70,58 +51,34 @@ jobs:
           test "$(psql "$DATABASE_URL" -Atq -c "SELECT count(*) FROM pg_proc p JOIN pg_namespace n ON n.oid=p.pronamespace WHERE n.nspname='public' AND p.proname IN ('psi_verify_context','api_accept_context','psi_current_verified_user');")" = "0"
           test "$(psql "$DATABASE_URL" -Atq -c "SELECT count(*) FROM pg_class WHERE relnamespace='public'::regnamespace AND relname IN ('psi_perf_results','psi_performance_results','psi_verification_results');")" = "0"
           test "$(psql "$DATABASE_URL" -Atq -c "SELECT count(*) FROM pg_proc p JOIN pg_namespace n ON n.oid=p.pronamespace WHERE n.nspname='public' AND p.proname='psi_record_test';")" = "0"
-
       - name: Emit first-pass manifest class roots
-        run: |
-          psql "$DATABASE_URL" -Atq -f scripts/canonical_manifest_class_roots_001f.sql
-
+        run: psql "$DATABASE_URL" -Atq -f scripts/canonical_manifest_class_roots_001f.sql
+      - name: Emit first-pass relation/function fingerprints
+        run: psql "$DATABASE_URL" -Atq -f scripts/canonical_manifest_fingerprints_001f.sql
       - name: Compare first-pass canonical object root
         run: |
           set -euo pipefail
           actual="$(psql "$DATABASE_URL" -Atq -f scripts/canonical_manifest_root_001f.sql | tail -n 1)"
-          echo "expected=$EXPECTED_001F_ROOT"
-          echo "actual=$actual"
-          test "$actual" = "$EXPECTED_001F_ROOT"
-
+          echo "expected=$EXPECTED_001F_ROOT"; echo "actual=$actual"; test "$actual" = "$EXPECTED_001F_ROOT"
       - name: Replay complete recovered chain
         run: |
           set -euo pipefail
           psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f db/migrations/000_roles.sql
-          for f in \
-            .recovered-migrations/001B_base.sql \
-            .recovered-migrations/001C_runtime_hardening.sql \
-            .recovered-migrations/001D_longitudinal_intelligence.sql \
-            .recovered-migrations/001E_personal_intelligence.sql \
-            .recovered-migrations/001F_delivery_read_model.sql \
-            db/migrations/001F_001_runtime_reconciliation.sql
-          do
-            echo "REPLAY $f"
-            psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f "$f"
+          for f in .recovered-migrations/001B_base.sql .recovered-migrations/001C_runtime_hardening.sql .recovered-migrations/001D_longitudinal_intelligence.sql .recovered-migrations/001E_personal_intelligence.sql .recovered-migrations/001F_delivery_read_model.sql db/migrations/001F_001_runtime_reconciliation.sql; do
+            echo "REPLAY $f"; psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f "$f";
           done
-
       - name: Emit second-pass manifest class roots
-        run: |
-          psql "$DATABASE_URL" -Atq -f scripts/canonical_manifest_class_roots_001f.sql
-
+        run: psql "$DATABASE_URL" -Atq -f scripts/canonical_manifest_class_roots_001f.sql
       - name: Compare second-pass canonical object root
         run: |
           set -euo pipefail
-          actual="$(psql "$DATABASE_URL" -Atq -f scripts/canonical_manifest_root_001f.sql | tail -n 1)"
-          echo "expected=$EXPECTED_001F_ROOT"
-          echo "actual=$actual"
-          test "$actual" = "$EXPECTED_001F_ROOT"
-
+          actual="$(psql "$DATABASE_URL" -Atq -f scripts/canonical_manifest_root_001f.sql | tail -n 1)"; echo "expected=$EXPECTED_001F_ROOT"; echo "actual=$actual"; test "$actual" = "$EXPECTED_001F_ROOT"
       - name: Assert dashboard direct-table denial
         run: |
           psql "$DATABASE_URL" -v ON_ERROR_STOP=1 <<'SQL'
-          DO $$
-          DECLARE n integer;
-          BEGIN
-            SELECT count(*) INTO n
-            FROM pg_class c
-            JOIN pg_namespace ns ON ns.oid=c.relnamespace
-            WHERE ns.nspname='public' AND c.relkind='r'
-              AND has_table_privilege('psi_dashboard_reader',c.oid,'SELECT');
+          DO $$ DECLARE n integer; BEGIN
+            SELECT count(*) INTO n FROM pg_class c JOIN pg_namespace ns ON ns.oid=c.relnamespace
+            WHERE ns.nspname='public' AND c.relkind='r' AND has_table_privilege('psi_dashboard_reader',c.oid,'SELECT');
             IF n<>0 THEN RAISE EXCEPTION 'dashboard role has direct SELECT on % tables',n; END IF;
           END $$;
           SQL
