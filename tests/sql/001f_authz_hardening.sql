@@ -15,7 +15,37 @@ BEGIN
   IF n<>0 THEN RAISE EXCEPTION 'AUTHZ_RLS_FAIL: % policies still mutable/unverified',n; END IF;
 END $$;
 
--- Function ACL oracle: no internal non-extension PSI function may remain PUBLIC/dashboard executable.
+-- Defense-in-depth RLS: all later user-owned 001D/001E tables must also be protected.
+DO $$
+DECLARE missing_rls integer; bad_policy integer;
+BEGIN
+  SELECT count(*) INTO missing_rls
+  FROM pg_class c JOIN pg_namespace n ON n.oid=c.relnamespace
+  WHERE n.nspname='public'
+    AND c.relname IN (
+      'observation_daily_rollups','observation_weekly_rollups',
+      'experiment_protocols','experiment_checkins','user_auth_identities',
+      'personal_insights','insight_confidence_components','insight_evidence_links','attention_items'
+    )
+    AND NOT c.relrowsecurity;
+  IF missing_rls<>0 THEN RAISE EXCEPTION 'AUTHZ_LATE_RLS_FAIL: % later user-owned tables lack RLS',missing_rls; END IF;
+
+  SELECT count(*) INTO bad_policy
+  FROM pg_policies
+  WHERE schemaname='public'
+    AND tablename IN (
+      'observation_daily_rollups','observation_weekly_rollups',
+      'experiment_protocols','experiment_checkins','user_auth_identities',
+      'personal_insights','insight_confidence_components','insight_evidence_links','attention_items'
+    )
+    AND (coalesce(qual,'') NOT ILIKE '%psi_current_user_from_auth()%'
+         OR coalesce(with_check,'') NOT ILIKE '%psi_current_user_from_auth()%'
+         OR coalesce(qual,'') ILIKE '%app.user_id%'
+         OR coalesce(with_check,'') ILIKE '%app.user_id%');
+  IF bad_policy<>0 THEN RAISE EXCEPTION 'AUTHZ_LATE_RLS_FAIL: % later-table policies are not verified-auth bound',bad_policy; END IF;
+END $$;
+
+-- Function ACL oracle: no internal non-extension PSI function may remain client executable.
 DO $$
 DECLARE n integer;
 BEGIN
@@ -35,11 +65,12 @@ BEGIN
   SELECT count(*) INTO n
   FROM funcs f
   WHERE EXISTS(SELECT 1 FROM public_exec x WHERE x.oid=f.oid)
-     OR has_function_privilege('psi_dashboard_reader',f.oid,'EXECUTE');
+     OR has_function_privilege('psi_dashboard_reader',f.oid,'EXECUTE')
+     OR (EXISTS(SELECT 1 FROM pg_roles WHERE rolname='authenticated') AND has_function_privilege('authenticated',f.oid,'EXECUTE'));
   IF n<>0 THEN RAISE EXCEPTION 'AUTHZ_FUNC_FAIL: % internal functions remain client executable',n; END IF;
 END $$;
 
--- Governed API allowlist invariant: APIs are dashboard-executable but never PUBLIC-executable.
+-- Governed API allowlist invariant: APIs are dashboard-executable but never PUBLIC/authenticated-executable.
 DO $$
 DECLARE bad integer;
 BEGIN
@@ -59,8 +90,41 @@ BEGIN
   SELECT count(*) INTO bad
   FROM funcs f
   WHERE EXISTS(SELECT 1 FROM public_exec x WHERE x.oid=f.oid)
-     OR NOT has_function_privilege('psi_dashboard_reader',f.oid,'EXECUTE');
+     OR NOT has_function_privilege('psi_dashboard_reader',f.oid,'EXECUTE')
+     OR (EXISTS(SELECT 1 FROM pg_roles WHERE rolname='authenticated') AND has_function_privilege('authenticated',f.oid,'EXECUTE'));
   IF bad<>0 THEN RAISE EXCEPTION 'AUTHZ_API_FAIL: % governed APIs have incorrect ACLs',bad; END IF;
+END $$;
+
+-- SECURITY DEFINER invariant: governed public functions must pin a trusted search path.
+DO $$
+DECLARE bad integer;
+BEGIN
+  SELECT count(*) INTO bad
+  FROM pg_proc p JOIN pg_namespace n ON n.oid=p.pronamespace
+  WHERE n.nspname='public' AND p.prosecdef
+    AND pg_get_userbyid(p.proowner)=current_user
+    AND (
+      p.proconfig IS NULL
+      OR NOT EXISTS (
+        SELECT 1 FROM unnest(p.proconfig) cfg
+        WHERE cfg LIKE 'search_path=%' AND cfg LIKE '%pg_temp%'
+      )
+    );
+  IF bad<>0 THEN RAISE EXCEPTION 'AUTHZ_SEARCH_PATH_FAIL: % SECURITY DEFINER functions lack pinned trusted search_path',bad; END IF;
+END $$;
+
+-- Trusted schemas used by SECURITY DEFINER code must not be CREATE-writable by client roles.
+DO $$
+DECLARE bad integer;
+BEGIN
+  WITH role_names(role_name) AS (
+    VALUES ('psi_dashboard_reader'::text),('authenticated'::text)
+  )
+  SELECT count(*) INTO bad
+  FROM role_names r CROSS JOIN (VALUES ('public'::text),('auth'::text)) s(schema_name)
+  WHERE EXISTS(SELECT 1 FROM pg_roles pr WHERE pr.rolname=r.role_name)
+    AND has_schema_privilege(r.role_name,s.schema_name,'CREATE');
+  IF bad<>0 THEN RAISE EXCEPTION 'AUTHZ_SCHEMA_FAIL: % client-role trusted-schema CREATE grants remain',bad; END IF;
 END $$;
 
 -- Dashboard must not invoke identity resolver or maintenance/mutation helpers directly.
@@ -86,7 +150,7 @@ END $$;
 GRANT USAGE ON SCHEMA public,auth TO psi_rls_probe;
 GRANT EXECUTE ON FUNCTION auth.user_id() TO psi_rls_probe;
 GRANT EXECUTE ON FUNCTION psi_current_user_from_auth() TO psi_rls_probe;
-GRANT SELECT,INSERT ON goals TO psi_rls_probe;
+GRANT SELECT,INSERT ON goals,personal_insights,observation_daily_rollups TO psi_rls_probe;
 
 INSERT INTO users(id) VALUES
   ('00000000-0000-0000-0000-0000000000a1'),
@@ -101,6 +165,14 @@ INSERT INTO goals(id,user_id,label,domain,target_direction,status) VALUES
  ('10000000-0000-0000-0000-0000000000a1','00000000-0000-0000-0000-0000000000a1','A goal','test','understand','active'),
  ('10000000-0000-0000-0000-0000000000b2','00000000-0000-0000-0000-0000000000b2','B goal','test','understand','active')
 ON CONFLICT DO NOTHING;
+INSERT INTO personal_insights(id,user_id,insight_type,subject_type,title,summary,authority_class,status) VALUES
+ ('20000000-0000-0000-0000-0000000000a1','00000000-0000-0000-0000-0000000000a1','change_detected','test','A insight','A only','informational','active'),
+ ('20000000-0000-0000-0000-0000000000b2','00000000-0000-0000-0000-0000000000b2','change_detected','test','B insight','B only','informational','active')
+ON CONFLICT DO NOTHING;
+INSERT INTO observation_daily_rollups(user_id,metric,day,n) VALUES
+ ('00000000-0000-0000-0000-0000000000a1','probe','2026-10-16',1),
+ ('00000000-0000-0000-0000-0000000000b2','probe','2026-10-16',1)
+ON CONFLICT(user_id,metric,day) DO UPDATE SET n=EXCLUDED.n;
 
 SET ROLE psi_rls_probe;
 SELECT set_config('request.jwt.claim.sub','sub-a',false);
@@ -109,9 +181,17 @@ DO $$
 DECLARE n integer;
 BEGIN
   SELECT count(*) INTO n FROM goals;
-  IF n<>1 THEN RAISE EXCEPTION 'AUTHZ_RLS_FAIL: forged app.user_id changed visible row count to %',n; END IF;
+  IF n<>1 THEN RAISE EXCEPTION 'AUTHZ_RLS_FAIL: forged app.user_id changed visible goal row count to %',n; END IF;
   IF EXISTS(SELECT 1 FROM goals WHERE user_id<>'00000000-0000-0000-0000-0000000000a1') THEN
-    RAISE EXCEPTION 'AUTHZ_RLS_FAIL: cross-user row visible under forged app.user_id';
+    RAISE EXCEPTION 'AUTHZ_RLS_FAIL: cross-user goal visible under forged app.user_id';
+  END IF;
+  SELECT count(*) INTO n FROM personal_insights;
+  IF n<>1 OR EXISTS(SELECT 1 FROM personal_insights WHERE user_id<>'00000000-0000-0000-0000-0000000000a1') THEN
+    RAISE EXCEPTION 'AUTHZ_LATE_RLS_FAIL: cross-user personal insight visible';
+  END IF;
+  SELECT count(*) INTO n FROM observation_daily_rollups;
+  IF n<>1 OR EXISTS(SELECT 1 FROM observation_daily_rollups WHERE user_id<>'00000000-0000-0000-0000-0000000000a1') THEN
+    RAISE EXCEPTION 'AUTHZ_LATE_RLS_FAIL: cross-user rollup visible';
   END IF;
 END $$;
 
@@ -121,6 +201,12 @@ BEGIN
     INSERT INTO goals(user_id,label,domain,target_direction,status)
     VALUES('00000000-0000-0000-0000-0000000000b2','forged','test','understand','active');
     RAISE EXCEPTION 'AUTHZ_RLS_FAIL: cross-user insert unexpectedly succeeded';
+  EXCEPTION WHEN insufficient_privilege THEN NULL;
+  END;
+  BEGIN
+    INSERT INTO personal_insights(user_id,insight_type,subject_type,title,summary,authority_class,status)
+    VALUES('00000000-0000-0000-0000-0000000000b2','change_detected','test','forged','forged','informational','active');
+    RAISE EXCEPTION 'AUTHZ_LATE_RLS_FAIL: cross-user personal insight insert unexpectedly succeeded';
   EXCEPTION WHEN insufficient_privilege THEN NULL;
   END;
 END $$;
