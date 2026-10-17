@@ -126,4 +126,5 @@ BEGIN
 END $$;
 RESET ROLE;
 
+DROP OWNED BY psi_rls_probe;
 DROP ROLE psi_rls_probe;
