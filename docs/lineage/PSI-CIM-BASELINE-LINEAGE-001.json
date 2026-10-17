@@ -1,17 +1,46 @@
 {
   "artifact": "PSI-CIM-BASELINE-LINEAGE-001",
-  "status": "RECOVERED_ORIGINALS_PENDING_CLEAN_BUILD",
+  "status": "RECOVERED_ORIGINALS_AND_HARDENED_001F_VERIFIED__ZERO_TO_001G_PENDING",
   "runtime": {
     "project_id": "polished-resonance-55615569",
     "branch_id": "br-shiny-mode-b807pp2e",
     "database": "neondb",
     "postgres_version": 17,
-    "public_tables": 46,
-    "public_views": 17,
-    "public_nonextension_functions": 48,
-    "public_triggers": 37,
-    "public_rls_tables": 7,
-    "public_rls_policies": 7
+    "note": "Verified runtime reference only. Post-lineage H1-H4 repository hardening has NOT been applied to this canonical runtime branch."
+  },
+  "historical_verified_001f": {
+    "manifest_root": "151|0edffd890d3b1347b9abdf73f108322e856cef28a5e88045e249fe3d44fb08b5",
+    "scope": "Recovered signed originals plus separately labeled 000_roles compatibility repair and 001F_001/001F_002 runtime-definition reconciliation, converged to the verified 001F product baseline.",
+    "clean_postgresql17_build": "PASS",
+    "originals_recovered": true,
+    "reconstructed_snapshot_required": false
+  },
+  "postlineage_hardened_001f": {
+    "manifest_root": "177|61d9ba2210293729a6076572c416431312efa06dc1f595d12adbaf503bf27ed8",
+    "first_apply": "PASS",
+    "second_replay": "PASS",
+    "replay_root_identical": true,
+    "ci_run_id": 39014174287,
+    "ci_job_id": 117342724655,
+    "certified_head_sha": "d6a80d2dd322e2d5d0c2e6dd26a0335a1b54b15e",
+    "hardening_layers": [
+      "001F_003_authz_rls_hardening.sql",
+      "001F_004_function_acl_hardening.sql",
+      "001F_005_late_table_rls_hardening.sql",
+      "001F_006_client_surface_hardening.sql"
+    ],
+    "verified_controls": [
+      "core RLS predicates use psi_current_user_from_auth() instead of mutable app.user_id",
+      "nine later 001D/001E user-scoped tables have defense-in-depth RLS",
+      "user_auth_identities direct client access is RLS deny-all",
+      "internal non-extension PSI functions are not PUBLIC/dashboard/authenticated executable",
+      "governed api_* functions remain dashboard-executable only",
+      "SECURITY DEFINER functions pin trusted search_path including pg_temp",
+      "client roles cannot CREATE in trusted public/auth schemas",
+      "forged app.user_id cannot alter visible user scope",
+      "H1-H4 are idempotent under full replay"
+    ],
+    "deployment_state": "REPOSITORY_AND_CI_ONLY__NOT_APPLIED_TO_CANONICAL_NEON_RUNTIME"
   },
   "canonical_order": [
     {"path":"db/migrations/000_roles.sql","origin":"new_compatibility_repair"},
@@ -19,7 +48,13 @@
     {"name":"001C_runtime_hardening.sql","origin":"original_signed_recovered","sha256":"69d6b76a9723052a0e5fcecc8ed305738a553ad2bcbd00123151cb22d9f3ae7c"},
     {"name":"001D_longitudinal_intelligence.sql","origin":"original_signed_recovered","sha256":"2cdadabf81970ac534643f32ba1441821794b7a790150d3f2c84475c900791e2"},
     {"name":"001E_personal_intelligence.sql","origin":"original_signed_recovered","sha256":"fda38fd5dfd57bed4d9bd7a0066acc582c0d8ab5cb4714966c7a50ab3e13bca9"},
-    {"name":"001F_delivery_read_model.sql","origin":"original_signed_recovered","sha256":"5feeef146069191b989d8738f272f7abb69bbd096527e5bae32e6c3e539b2a04"}
+    {"name":"001F_delivery_read_model.sql","origin":"original_signed_recovered","sha256":"5feeef146069191b989d8738f272f7abb69bbd096527e5bae32e6c3e539b2a04"},
+    {"path":"db/migrations/001F_001_runtime_reconciliation.sql","origin":"runtime_recovered_reconciliation"},
+    {"path":"db/migrations/001F_002_definition_reconciliation.sql","origin":"runtime_recovered_reconciliation"},
+    {"path":"db/migrations/001F_003_authz_rls_hardening.sql","origin":"postlineage_hardening"},
+    {"path":"db/migrations/001F_004_function_acl_hardening.sql","origin":"postlineage_hardening"},
+    {"path":"db/migrations/001F_005_late_table_rls_hardening.sql","origin":"postlineage_hardening"},
+    {"path":"db/migrations/001F_006_client_surface_hardening.sql","origin":"postlineage_hardening"}
   ],
   "packages": {
     "001B_ddl":{"sha256":"0333e321b3065161e8ab8dce2da2e473d472430350f23c34e037efc866445063","library_file_id":"file_00000000c5c881fa962dbb825cde3b62","classification":"superseded_provenance"},
@@ -29,19 +64,18 @@
     "001E_r1":{"sha256":"f7bef6e47550d3b766c0db8284f8ea519664d614d9f04860c6b60934068c40a5","library_file_id":"file_0000000021b8822f8c3fd6d3f31813e3","signature":"verified_ephemeral_ed25519"},
     "001F_r1":{"sha256":"921edcfa4725537a387e4fd10f7decf7f543785176656ddad71339eab600e41f","library_file_id":"file_00000000d22081f7b933ef0530b2d512","signature":"verified_ephemeral_ed25519"}
   },
-  "security_findings": {
-    "direct_nonowner_acl_on_rls_tables": false,
-    "security_definer_public_execute": false,
-    "untrusted_schema_create": false,
-    "historical_rls_uses_mutable_app_user_id": true,
-    "rls_finding_issue": 4
+  "signature_scope": "Artifact-integrity only. Ephemeral Ed25519 signatures are not organizational, legal, clinical, or human approval signatures.",
+  "security_findings_resolved_in_repository": {
+    "historical_mutable_app_user_id_rls": "resolved_by_001F_003",
+    "internal_default_public_function_execute": "resolved_by_001F_004_and_001F_006",
+    "late_user_scoped_tables_without_rls": "resolved_by_001F_005",
+    "trusted_schema_create_and_client_function_acl_convergence": "resolved_by_001F_006"
   },
   "reconstruction_required": false,
   "remaining_gates": [
-    "exact-byte GitHub archival representation with hash verification",
-    "empty PostgreSQL 17 build through 001F",
-    "001F object fingerprint comparison to verified runtime",
-    "second full replay",
-    "then zero-to-001G integration certification"
-  ]
+    "zero-to-001G integration build from empty PostgreSQL 17 using recovered originals + compatibility/reconciliation + H1-H4 + complete 001G chain",
+    "second full zero-built replay through 001G",
+    "001G invariant/E2E/concurrency/auth-regression verification on that integrated lineage"
+  ],
+  "separate_external_gate": "Production valid-interactive-JWT E2E remains Issue #3 and is not part of this lineage verdict."
 }
